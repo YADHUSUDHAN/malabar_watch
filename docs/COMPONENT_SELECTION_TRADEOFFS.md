@@ -13,10 +13,10 @@ This document provides a comprehensive Architectural Decision Record (ADR) detai
 | **Primary LLM** | Google Gemini (`gemini-2.5-flash`) | OpenAI GPT-4o-mini, Anthropic Claude 3.5 Haiku, DeepSeek V3 | Generous free tier (15 RPM / 1M TPM), superior native Malayalam generation. |
 | **Fallback LLM** | Groq API (`llama-3.3-70b-versatile`) | Together AI, Ollama Local, Cerbras AI | Ultra-fast inferencing (<500ms), generous free tier (30 RPM / 14.4k RPD). |
 | **Alert Delivery Channel** | Telegram Bot API | WhatsApp Business API, SMS (Twilio), Mobile App (Flutter), Web Dashboard | Outbound-only long polling (zero open ports), 100% free unlimited push alerts. |
-| **Cloud Compute Host** | Oracle Cloud Free Tier (ARM) | GCP e2-micro, AWS EC2 t2.micro, Azure B1s, Render/Fly.io | Genuinely free forever: 4 OCPU, 24GB RAM (vs 0.25 vCPU / 1GB RAM on AWS/GCP). |
+| **Cloud Compute Host** | GCP Compute Engine Always Free (`e2-micro`) | Oracle Cloud Free Tier, AWS EC2 t2.micro, Azure B1s, Render/Fly.io | Genuinely free forever: 1 VM (0.25-2 vCPU, 1GB RAM + 2GB Swap, 30GB disk), reliable global availability & seamless account setup. |
 | **Database Engine** | SQLite 3 (WAL Mode) | PostgreSQL / MySQL, MongoDB, Redis, Cloud DynamoDB | Zero ops, zero RAM overhead, embedded local file storage with high concurrency. |
 | **Infrastructure as Code** | Terraform | AWS CloudFormation, Pulumi, Manual Cloud Console | Vendor-neutral industry standard, declarative state management. |
-| **Security Access Model** | Oracle Cloud Bastion Service | Open Public SSH (Port 22), OpenVPN Server, Tailscale / Cloudflare Tunnel | True zero public exposed inbound ports; authenticated ephemeral Bastion sessions. |
+| **Security Access Model** | GCP VPC Firewall (Zero Inbound Inbound Ports) | Open Public SSH (Port 22), OpenVPN Server, Tailscale / Cloudflare Tunnel | True zero public exposed inbound application ports; outbound long-polling only. |
 | **Deployment & CI/CD** | GitHub Actions + OIDC | Jenkins, GitLab CI, Manual SSH deployment | Free for public repos, keyless OIDC authentication eliminates long-lived credentials. |
 
 ---
@@ -101,17 +101,18 @@ This document provides a comprehensive Architectural Decision Record (ADR) detai
 
 ---
 
-### 2.6 Cloud Compute Host: Oracle Cloud Free Tier vs. Alternatives
+### 2.6 Cloud Compute Host: GCP Compute Engine Always Free vs. Alternatives
 
-- **SELECTED:** **Oracle Cloud Infrastructure (OCI) Always Free Tier (ARM Ampere A1)**
+- **SELECTED:** **Google Cloud Platform (GCP) Compute Engine Always Free (`e2-micro`)**
   - *Why Chosen:*
-    1. **Massive Compute Allocation:** 4 OCPU, 24 GB RAM, 200 GB Storage—genuinely free forever.
-    2. **Enterprise Networking:** Includes Virtual Cloud Network (VCN), custom security lists, and native Bastion service.
+    1. **Permanent Free Tier:** 1 `e2-micro` VM (0.25–2 vCPU, 1 GB RAM, 30 GB Persistent Disk) free forever in `us-central1`, `us-east1`, or `us-west1`.
+    2. **High Accessibility & Fast Provisioning:** Standard GCP account setup without card verification hurdles or capacity shortages often encountered on Oracle Cloud.
+    3. **Optimized Resource Footprint:** Paired with 2 GB Linux Swap space on Ubuntu 24.04 LTS, easily handles Python 3.12, SQLite WAL mode, and Telegram long polling with zero cost.
 - **REJECTED ALTERNATIVES:**
+  - ❌ **Oracle Cloud Free Tier (ARM Ampere A1):**
+    - *Reason for Rejection:* High signup verification failure rates, card rejection issues, and frequent out-of-capacity errors for ARM shapes in many global regions.
   - ❌ **AWS Free Tier (t2.micro / t3.micro):**
-    - *Reason for Rejection:* Free tier expires after 12 months, provides only 1 vCPU and 1 GB RAM (frequent OOM crashes), and charges for elastic IPs if stopped.
-  - ❌ **GCP Free Tier (e2-micro):**
-    - *Reason for Rejection:* Constrained to 0.25 vCPU (burstable) and 1 GB RAM, only in select US regions (high latency from India), and incurs unexpected network egress fees.
+    - *Reason for Rejection:* Free tier expires after 12 months (not permanent), provides only 1 vCPU and 1 GB RAM, and incurs charges for elastic IPs if stopped.
   - ❌ **Serverless PaaS (Render / Fly.io / Vercel):**
     - *Reason for Rejection:* Free tiers put background workers to sleep after inactivity, breaking hourly cron schedules or requiring inbound pingers (which expose ports).
 
@@ -122,7 +123,7 @@ This document provides a comprehensive Architectural Decision Record (ADR) detai
 - **SELECTED:** **SQLite 3 (with Write-Ahead Logging enabled)**
   - *Why Chosen:*
     1. **Zero Resource Overhead:** Operates inside the Python process without running a background daemon (saving RAM and CPU).
-    2. **High Reliability & ACiD:** WAL mode allows concurrent readers while writing, handling thousands of hourly logs easily.
+    2. **High Reliability & ACID:** WAL mode allows concurrent readers while writing, handling thousands of hourly logs easily.
     3. **Single File Backup:** Easy file copy for snapshot backups and local developer debugging.
 - **REJECTED ALTERNATIVES:**
   - ❌ **PostgreSQL / MySQL Daemon:**
@@ -132,14 +133,14 @@ This document provides a comprehensive Architectural Decision Record (ADR) detai
 
 ---
 
-### 2.8 Security Model: Oracle Cloud Bastion vs. Alternatives
+### 2.8 Security Model: GCP VPC Firewall & Keyless Access vs. Alternatives
 
-- **SELECTED:** **Oracle Cloud Bastion Service (Zero Public Ports)**
+- **SELECTED:** **GCP VPC Firewall & Keyless Deployment (Zero Inbound App Ports)**
   - *Why Chosen:*
-    1. **True Zero Exposure:** Public IP security list blocks all inbound ports (`DENY ALL`).
-    2. **Ephemeral Access:** SSH access tunnels are dynamically generated using temporary SSH keys and expire automatically after 1 hour.
+    1. **Zero Public Inbound Exposure:** VPC Firewall rules block all incoming traffic to application ports (`DENY ALL`).
+    2. **Outbound-Only Communication:** Telegram long-polling and Open-Meteo polling originate strictly outbound over HTTPS.
 - **REJECTED ALTERNATIVES:**
-  - ❌ **Public SSH (Port 22 Open to 0.0.0.0/0):**
-    - *Reason for Rejection:* Exposes host to relentless automated SSH brute-force botnets on the internet.
+  - ❌ **Public Webhook Servers (Port 80/443 Open to 0.0.0.0/0):**
+    - *Reason for Rejection:* Exposes host to web vulnerabilities, requires managing SSL certificates (Certbot), and opens inbound attack vectors.
   - ❌ **Self-Hosted VPN (OpenVPN / WireGuard):**
     - *Reason for Rejection:* Requires opening a UDP/TCP inbound port on the VM, increasing attack surface and maintenance burden.

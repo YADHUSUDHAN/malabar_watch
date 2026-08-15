@@ -12,7 +12,7 @@ Malabar Watch adheres to standard cloud-native and software architecture princip
 
 | 12-Factor Principle | Implementation in Malabar Watch |
 |---|---|
-| **I. Codebase** | Single git repository tracked in GitHub, deploying to Oracle Cloud environment. |
+| **I. Codebase** | Single git repository tracked in GitHub, deploying to GCP Compute Engine environment. |
 | **II. Dependencies** | Explicitly declared in `requirements.txt` with locked versions; isolated via Python `venv`. |
 | **III. Config** | Strict separation of config from code via environment variables (`.env`, `src/config.py`). Secrets never committed. |
 | **IV. Backing Services** | SQLite database, Open-Meteo API, Telegram API, and LLM endpoints treated as attached resources. |
@@ -93,7 +93,7 @@ tests/
 
 ## 4. Operational Health & Observability Metrics
 
-For production monitoring on Oracle Cloud ARM without adding third-party SaaS costs:
+For production monitoring on GCP Compute Engine Always Free (`e2-micro`) without adding third-party SaaS costs:
 
 1. **Structured Log Telemetry (`structlog`):**
    Logs output in structured JSON format to standard output:

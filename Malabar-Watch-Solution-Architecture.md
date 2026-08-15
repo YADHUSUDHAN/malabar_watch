@@ -18,7 +18,7 @@ Malabar Watch bridges this gap by combining:
 1. High-resolution hourly precipitation data from **Open-Meteo**.
 2. Deterministic multi-day cumulative risk scoring.
 3. Resilient dual-LLM intelligence (**Google Gemini API primary**, **Groq API fallback**) to generate accessible, bilingual alerts.
-4. **Zero-recurring-cost cloud infrastructure** provisioned on Oracle Cloud Always Free Tier (ARM Ampere A1).
+4. **Zero-recurring-cost cloud infrastructure** provisioned on GCP Compute Engine Always Free Tier (`e2-micro`, 0.25-2 vCPU, 1 GB RAM, 30 GB disk, 2 GB Swap).
 5. **Zero-trust, zero-exposed-inbound-port security architecture**.
 
 ---
@@ -33,7 +33,7 @@ Malabar Watch bridges this gap by combining:
                                                        │ Outbound HTTPS Pull (Hourly)
                                                        ▼
 ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│                                 MALABAR WATCH ENGINE (Oracle Cloud ARM)                                 │
+│                           MALABAR WATCH ENGINE (GCP Compute Engine Always Free)                         │
 │                                                                                                         │
 │  ┌──────────────────────────────┐          ┌────────────────────────────────────────────────────────┐  │
 │  │   Data Ingestion Engine      │─────────▶│                SQLite Storage (WAL Mode)                │  │
@@ -81,14 +81,14 @@ Malabar Watch bridges this gap by combining:
 
 | Layer | Choice | Technical Rationale | Recurring Cost |
 |---|---|---|---|
-| **Compute / OS** | Oracle Cloud Free Tier (ARM Ampere A1, 4 OCPU, 24GB RAM) / Ubuntu 24.04 LTS | Highest spec free-forever cloud VM available globally | **₹0 / month** |
-| **IaC & Security** | Terraform + Oracle Cloud Bastion Service | Keyless, zero-inbound SSH ports, reproducible setup | **₹0 / month** |
+| **Compute / OS** | GCP Compute Engine Always Free (`e2-micro`, 0.25-2 vCPU, 1 GB RAM, 30 GB Disk + 2 GB Swap) / Ubuntu 24.04 LTS | Permanent free-forever cloud VM available globally | **₹0 / month** |
+| **IaC & Security** | Terraform + GCP VPC Firewall Rules | Keyless, zero-inbound SSH ports, reproducible setup | **₹0 / month** |
 | **Data Provider** | Open-Meteo API | Free, high-resolution hourly precipitation, no API key needed | **₹0 / month** |
 | **Primary LLM** | Google Gemini API (`gemini-2.5-flash` / `gemini-1.5-flash`) | Generous free tier rate limits (15 RPM / 1M TPM), excellent bilingual capability | **₹0 / month** |
 | **Fallback LLM** | Groq API (`llama-3.3-70b-versatile`) | Ultra-fast inferencing free tier (30 RPM / 14.4k RPD), reliable backup | **₹0 / month** |
 | **Storage** | SQLite 3 (WAL Mode enabled) | File-based, zero-maintenance, handles 100k+ records easily | **₹0 / month** |
 | **Bot Framework** | `python-telegram-bot` (Async) | Long-polling outbound connection; no exposed inbound ports | **₹0 / month** |
-| **CI/CD** | GitHub Actions + OIDC / Bastion Tunnel | Keyless deployment pipeline directly from git repository | **₹0 / month** |
+| **CI/CD** | GitHub Actions + OIDC | Keyless deployment pipeline directly from git repository | **₹0 / month** |
 | **Total Cost** | | | **₹0 / month** |
 
 ---
@@ -130,5 +130,5 @@ The documentation for this project is organized under the [`docs/`](file:///d:/p
 - [`docs/RISK_MODEL_SPEC.md`](file:///d:/projects/malabar_watch/docs/RISK_MODEL_SPEC.md) - Risk threshold matrix & historical event context.
 - [`docs/LLM_PROMPT_ENGINEERING.md`](file:///d:/projects/malabar_watch/docs/LLM_PROMPT_ENGINEERING.md) - Gemini/Groq prompt engineering & JSON schema.
 - [`docs/TELEGRAM_BOT_GUIDE.md`](file:///d:/projects/malabar_watch/docs/TELEGRAM_BOT_GUIDE.md) - Telegram bot setup, commands & BotFather guide.
-- [`docs/INFRA_AND_SECURITY.md`](file:///d:/projects/malabar_watch/docs/INFRA_AND_SECURITY.md) - Oracle Cloud ARM, Bastion, Terraform & GitHub Actions CI/CD.
+- [`docs/INFRA_AND_SECURITY.md`](file:///d:/projects/malabar_watch/docs/INFRA_AND_SECURITY.md) - GCP Compute Engine Always Free, Terraform & GitHub Actions CI/CD.
 - [`docs/DISCLAIMER.md`](file:///d:/projects/malabar_watch/docs/DISCLAIMER.md) - Project disclaimer & safety guidelines.

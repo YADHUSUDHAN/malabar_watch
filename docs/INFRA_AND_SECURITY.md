@@ -1,15 +1,16 @@
-# Infrastructure & Security Specification - Oracle Cloud ARM & Zero-Trust Architecture
+# Infrastructure & Security Specification - GCP Compute Engine Always Free & Zero-Trust Architecture
 
 This document details the Cloud Infrastructure-as-Code (Terraform) design, security hardening, zero-inbound port networking, and automated deployment pipeline for **Malabar Watch**.
 
 ---
 
-## 1. Cloud Provider: Oracle Cloud Infrastructure (OCI) Always Free Tier
+## 1. Cloud Provider: Google Cloud Platform (GCP) Compute Engine Always Free Tier
 
-Oracle Cloud provides the industry's most generous free tier compute shape:
-- **Compute Shape:** `VM.Standard.A1.Flex` (ARM Ampere A1 Core)
-- **Allocated Resources:** 4 OCPU, 24 GB RAM, 200 GB NVMe Storage
-- **Operating System:** Ubuntu 24.04 LTS (aarch64)
+GCP provides a permanent Always Free Compute Engine VM shape:
+- **Compute Instance:** `e2-micro` (0.25–2 vCPU, 1 GB RAM)
+- **Swap Allocation:** 2 GB Linux Swap File (Ubuntu 24.04 LTS)
+- **Persistent Storage:** 30 GB Standard Persistent Disk
+- **Free Tier Region:** `us-central1` (Iowa), `us-east1` (South Carolina), or `us-west1` (Oregon)
 - **Monthly Cost:** **₹0 / month (Permanently Free)**
 
 ---
@@ -21,15 +22,15 @@ Oracle Cloud provides the industry's most generous free tier compute shape:
                   │            PUBLIC INTERNET / USERS           │
                   └──────────────────────┬───────────────────────┘
                                          │
-                   DENY ALL INBOUND      │ (Firewall Security List blocks all
-                   PORTS (0.0.0.0/0)     │  inbound TCP/UDP traffic)
+                   DENY ALL INBOUND      │ (GCP VPC Firewall Rules block all
+                   APPLICATION PORTS     │  inbound TCP/UDP application traffic)
                                          ▼
                   ┌──────────────────────────────────────────────┐
-                  │    Oracle Virtual Cloud Network (VCN)        │
+                  │    Google Cloud VPC Network                  │
                   │                                              │
                   │   ┌──────────────────────────────────────┐   │
                   │   │   Malabar Watch Compute Instance     │   │
-                  │   │   (ARM 4 OCPU / 24GB RAM)            │   │
+                  │   │   (e2-micro + 2GB Swap)              │   │
                   │   │                                      │   │
                   │   │   - Outbound HTTPS (Open-Meteo API)  │───┼───▶ Open-Meteo API
                   │   │   - Outbound HTTPS (Gemini / Groq)   │───┼───▶ LLM APIs
@@ -37,18 +38,17 @@ Oracle Cloud provides the industry's most generous free tier compute shape:
                   │   └──────────────────▲───────────────────┘   │
                   └──────────────────────┼───────────────────────┘
                                          │
-                                         │ Admin SSH via Oracle Cloud Bastion Service
-                                         │ (Authenticated IAM, no public port 22 open)
+                                         │ Admin SSH via Keyless SSH / GCP Cloud IAP Tunnels
+                                         │ (Authenticated IAM, no public app ports open)
                   ┌──────────────────────┴───────────────────────┐
                   │   Developer / GitHub Actions CI/CD Deploy    │
                   └──────────────────────────────────────────────┘
 ```
 
 ### Key Hardening Principles:
-1. **Zero Open Public Inbound Ports:** Security List inbound rules are set to `DENY ALL`. No web servers, open SSH ports, or administrative listeners run on public IPs.
-2. **Oracle Cloud Bastion Service:** Developer SSH access and deployment tunnels are dynamically established via OCI Bastion with time-limited ephemeral sessions.
-3. **Outbound-Only Communication:** All external connectivity (weather data fetching, LLM API calls, Telegram bot polling and alert pushes) is initiated strictly from inside the VM outward over standard HTTPS (`443`).
-4. **Least-Privilege Execution:** System processes run under an unprivileged dedicated service user (`malabarwatch`), with environment secrets managed via `/etc/systemd/system/malabar-watch.service.d/override.conf`.
+1. **Zero Public Inbound Application Ports:** GCP VPC Firewall ingress rules block all incoming traffic to application ports (`DENY ALL`). No web servers or public HTTP listeners run on the host.
+2. **Outbound-Only Communication:** All external connectivity (weather data fetching, LLM API calls, Telegram bot polling and alert pushes) is initiated strictly from inside the VM outward over standard HTTPS (`443`).
+3. **Least-Privilege Execution:** System processes run under an unprivileged dedicated service user (`malabarwatch`), with environment secrets managed via `/etc/systemd/system/malabar-watch.service.d/override.conf`.
 
 ---
 
@@ -58,22 +58,20 @@ The infrastructure is defined under `terraform/`:
 
 ```hcl
 # terraform/main.tf
-resource "oci_core_vcn" "malabar_vcn" {
-  cidr_block     = "10.0.0.0/16"
-  compartment_id = var.compartment_id
-  display_name   = "malabar-watch-vcn"
+resource "google_compute_network" "malabar_vpc" {
+  name                    = "malabar-watch-vpc"
+  auto_create_subnetworks = true
 }
 
-resource "oci_core_security_list" "zero_inbound_sl" {
-  compartment_id = var.compartment_id
-  vcn_id         = oci_core_vcn.malabar_vcn.id
-  display_name   = "zero-inbound-security-list"
+resource "google_compute_firewall" "zero_inbound_fw" {
+  name    = "malabar-watch-zero-inbound"
+  network = google_compute_network.malabar_vpc.name
 
-  # NO egress restrictions, ZERO ingress rules
-  egress_security_rules {
-    destination = "0.0.0.0/0"
-    protocol    = "all"
+  deny {
+    protocol = "all"
   }
+
+  source_ranges = ["0.0.0.0/0"]
 }
 ```
 
@@ -83,6 +81,5 @@ resource "oci_core_security_list" "zero_inbound_sl" {
 
 Deployments are automated via `.github/workflows/deploy.yml`:
 1. Push to `main` branch triggers unit tests (`pytest`).
-2. On test success, GitHub Actions authenticates with OCI via **OpenID Connect (OIDC)** (keyless workload identity).
-3. Opens a temporary SSH session via Oracle Bastion tunnel.
-4. Syncs codebase (`rsync` / `git pull`), restarts `systemd` service cleanly.
+2. On test success, GitHub Actions authenticates with GCP via **OpenID Connect (OIDC)** Workload Identity Federation.
+3. Syncs codebase (`rsync` / `git pull`), restarts `systemd` service cleanly.

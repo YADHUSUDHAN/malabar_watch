@@ -1,6 +1,6 @@
 # External Services & Infrastructure Setup Guide
 
-This document provides complete, step-by-step instructions for provisioning all required external services, obtaining API credentials, creating Telegram alert bots, configuring zero-cost cloud hosting on Oracle Cloud ARM, and setting up GitHub Actions secrets for **Malabar Watch (മലബാർ വാച്ച്)**.
+This document provides complete, step-by-step instructions for provisioning all required external services, obtaining API credentials, creating Telegram alert bots, configuring zero-cost cloud hosting on Google Cloud Platform (GCP) Compute Engine Always Free Tier, and setting up GitHub Actions secrets for **Malabar Watch (മലബാർ വാച്ച്)**.
 
 ---
 
@@ -13,7 +13,7 @@ This document provides complete, step-by-step instructions for provisioning all 
 | **Telegram BotFather** | Outbound Alert Dispatcher | `TELEGRAM_BOT_TOKEN` | Free |
 | **Telegram Channel / User** | Target Alert Recipient | `TELEGRAM_CHAT_ID` | Free |
 | **Open-Meteo API** | Weather & Rainfall Data Source | *None (No Key Needed)* | Free / Open Access |
-| **Oracle Cloud (OCI)** | Always Free ARM Ampere Server | Host IP + SSH Private Key | ₹0/month (Always Free) |
+| **GCP Compute Engine** | Always Free `e2-micro` Linux VM | Host IP + SSH Private Key | ₹0/month (Always Free) |
 | **GitHub Repository** | Secrets & CI/CD Pipeline | Secrets configured in GitHub | Free |
 
 ---
@@ -109,37 +109,48 @@ GET https://api.open-meteo.com/v1/forecast?latitude=11.55&longitude=76.04&hourly
 
 ---
 
-## 5. ☁️ Oracle Cloud Infrastructure (OCI) Always Free ARM Setup
+## 5. ☁️ Google Cloud Platform (GCP) Compute Engine Always Free Setup
 
-Oracle Cloud offers an **Always Free Tier** featuring an ARM Ampere A1 Compute Instance with up to **4 OCPU cores, 24 GB RAM, and 200 GB storage** at ₹0/month forever.
+Google Cloud Console provides a **100% Always Free Tier** featuring 1 Compute Engine `e2-micro` Virtual Machine instance, 30 GB standard persistent disk, and 1 GB monthly outbound egress at ₹0/month forever.
 
-### Step 5.1: Register OCI Account
-1. Visit **[Oracle Cloud Free Tier](https://www.oracle.com/cloud/free/)**.
-2. Complete signup (requires credit card for identity verification; no charges are made for Always Free resources).
-3. Select your Home Region (e.g., `ap-hyderabad-1` or `ap-mumbai-1` for optimal latency to India).
+### Step 5.1: Create GCP Billing Account & Project
+1. Visit **[Google Cloud Console](https://console.cloud.google.com/)**.
+2. Sign in with your Google account and create a new project named `malabar-watch-prod`.
+3. Enable billing (requires credit card for identity verification; no charges will occur within Always Free limits).
 
 ### Step 5.2: Generate SSH Keypair (Local Terminal)
-Run the following command on your local machine to create a dedicated SSH keypair for server access:
+Run the following command on your local machine to generate an SSH keypair:
 ```bash
-ssh-keygen -t ed25519 -C "malabar-watch-oci" -f ~/.ssh/id_ed25519_malabar_oci
+ssh-keygen -t ed25519 -C "malabar-watch-gcp" -f ~/.ssh/id_ed25519_malabar_gcp
 ```
 This generates two files:
-- Private Key: `~/.ssh/id_ed25519_malabar_oci` (Keep confidential!)
-- Public Key: `~/.ssh/id_ed25519_malabar_oci.pub` (Upload to Oracle Cloud)
+- Private Key: `~/.ssh/id_ed25519_malabar_gcp` (Keep confidential!)
+- Public Key: `~/.ssh/id_ed25519_malabar_gcp.pub` (Upload to GCP)
 
-### Step 5.3: Provision VM Instance
-1. Log in to **Oracle Cloud Console**.
-2. Go to **Compute** ➔ **Instances** ➔ **Create Instance**.
-3. **Name**: `malabar-watch-prod-01`.
-4. **Image**: Select `Canonical Ubuntu 24.04 Minimal`.
-5. **Shape**: Click **Change Shape** ➔ Select **Ampere (ARM)** ➔ `VM.Standard.A1.Flex` (Configure 4 OCPUs, 24 GB RAM).
-6. **Networking**: Create a new Virtual Cloud Network (VCN) or use the Default VCN.
-7. **Add SSH Keys**: Select **Paste Public Keys** and paste the text from `id_ed25519_malabar_oci.pub`.
-8. Click **Create**. Note down the assigned **Public IP Address** (e.g., `129.154.xx.xx`).
+### Step 5.3: Provision Always Free `e2-micro` VM Instance
+1. Go to **Compute Engine** ➔ **VM Instances** ➔ **Create Instance**.
+2. **Name**: `malabar-watch-vm-01`.
+3. **Region**: Select an Always Free Region:
+   - `us-central1` (Iowa)
+   - `us-east1` (South Carolina)
+   - `us-west1` (Oregon)
+4. **Machine Family**: General-purpose ➔ Series `E2` ➔ Machine Type `e2-micro` (0.25–2 vCPU, 1 GB RAM).
+5. **Boot Disk**: Change OS to `Ubuntu` ➔ `Ubuntu 24.04 LTS` ➔ Size `30 GB` Standard Persistent Disk.
+6. **SSH Keys**: Expand **SSH Keys** ➔ Paste contents of `id_ed25519_malabar_gcp.pub`.
+7. Click **Create**. Note down the assigned **External Public IP**.
 
-### Step 5.4: Security List Rules (Firewall)
-- Since the bot operates using **outbound long-polling**, you **DO NOT** need to open any incoming HTTP/HTTPS ports (Ports 80/443).
-- Ensure only **Port 22 (SSH)** is permitted for admin access.
+### Step 5.4: Configure 2 GB Swap File on Ubuntu VM
+Since `e2-micro` has 1 GB RAM, configure a 2 GB Linux Swap file to prevent memory pressure during Python dependency installation:
+```bash
+ssh -i ~/.ssh/id_ed25519_malabar_gcp ubuntu@<YOUR_VM_PUBLIC_IP>
+
+# Inside VM:
+sudo fallocate -l 2G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+```
 
 ---
 
@@ -158,8 +169,8 @@ To automate testing, linting, and continuous deployment, store all sensitive pro
 | `GROQ_API_KEY` | Groq API Key (`gsk_...`) |
 | `TELEGRAM_BOT_TOKEN` | Telegram Bot Token from BotFather |
 | `TELEGRAM_CHAT_ID` | Telegram Channel or Group Chat ID (`-100...`) |
-| `OCI_HOST` | Oracle Cloud VM Public IP Address |
-| `OCI_SSH_KEY` | Contents of `~/.ssh/id_ed25519_malabar_oci` (Private Key) |
+| `GCP_HOST` | GCP Compute Engine VM Public IP Address |
+| `GCP_SSH_KEY` | Contents of `~/.ssh/id_ed25519_malabar_gcp` (Private Key) |
 
 ---
 
@@ -195,4 +206,5 @@ INGESTION_INTERVAL_MINUTES=60
 RAINFALL_WARNING_THRESHOLD_24H=100.0
 RAINFALL_HIGH_RISK_THRESHOLD_24H=150.0
 RAINFALL_EXTREME_THRESHOLD_24H=204.4
+ANTECEDENT_PRECIPITATION_INDEX_ALPHA=0.85
 ```
