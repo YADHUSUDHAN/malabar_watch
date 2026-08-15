@@ -1,0 +1,100 @@
+[project]
+name = "malabar-watch"
+version = "0.1.0"
+description = "AI-Powered Rainfall & Landslide Early-Warning Agent for Kerala"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    { name = "Malabar Watch Team" }
+]
+license = { text = "MIT" }
+keywords = ["kerala", "weather", "landslide", "early-warning", "gemini", "groq", "telegram", "ai-agent"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Other Audience",
+    "Topic :: Scientific/Engineering :: Atmospheric Science",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.7.0",
+    "httpx>=0.28.0",
+    "python-telegram-bot>=21.10",
+    "google-genai>=1.0.0",
+    "groq>=0.18.0",
+    "backoff>=2.2.1",
+    "rich>=13.9.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.25.0",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.9.0",
+    "mypy>=1.14.0",
+]
+
+[project.scripts]
+malabar-watch = "malabar_watch.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# ==============================================================================
+# Tool Configurations
+# ==============================================================================
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # Pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "ASYNC", # flake8-async
+]
+ignore = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["malabar_watch"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = false
+mypy_path = "src"
+
+[[tool.mypy.overrides]]
+module = [
+    "telegram.*",
+    "backoff.*",
+    "google.*",
+    "groq.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+markers = [
+    "unit: Fast running unit tests",
+    "integration: Component integration tests",
+    "evals: LLM bilingual response evaluation benchmarks",
+]

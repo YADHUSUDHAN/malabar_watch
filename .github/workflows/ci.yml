@@ -1,0 +1,51 @@
+name: CI & Quality Assurance
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    name: Lint, Type Check & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Install uv Package Manager
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Project Dependencies
+        run: |
+          uv sync --extra dev
+
+      - name: Run Ruff Code Quality Linter
+        run: |
+          uv run ruff check .
+
+      - name: Run Ruff Formatting Verification
+        run: |
+          uv run ruff format --check .
+
+      - name: Run MyPy Static Type Checker
+        run: |
+          uv run mypy src
+
+      - name: Run Pytest Test Suite
+        run: |
+          uv run pytest --cov=src --cov-report=xml
+
+      - name: Verify CLI Entrypoint
+        run: |
+          uv run malabar-watch

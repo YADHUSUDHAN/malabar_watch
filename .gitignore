@@ -1,0 +1,92 @@
+# ==============================================================================
+# Malabar Watch - Production Git Ignore Policy
+# ==============================================================================
+
+# Secrets & Environment Configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_ed25519*
+
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Package Managers (`uv` & `pip`)
+.uv/
+
+# SQLite Databases & WAL Journal Files
+*.sqlite
+*.sqlite3
+*.db
+*.sqlite-wal
+*.sqlite-shm
+*.db-wal
+*.db-shm
+
+# Testing & Coverage Metrics
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.nox/
+.tox/
+coverage.xml
+
+# Linters & Static Analysis
+.ruff_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Infrastructure as Code (Terraform)
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# IDEs & Editor Configuration
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
