@@ -120,12 +120,22 @@ Google Cloud Console provides a **100% Always Free Tier** featuring 1 Compute En
 
 ### Step 5.2: Generate SSH Keypair (Local Terminal)
 Run the following command on your local machine to generate an SSH keypair:
+
+**Linux / macOS (Bash/Zsh):**
 ```bash
+mkdir -p ~/.ssh
 ssh-keygen -t ed25519 -C "malabar-watch-gcp" -f ~/.ssh/id_ed25519_malabar_gcp
 ```
+
+**Windows (PowerShell):**
+```powershell
+New-Item -ItemType Directory -Path "$env:USERPROFILE\.ssh" -Force
+ssh-keygen -t ed25519 -C "malabar-watch-gcp" -f "$env:USERPROFILE\.ssh\id_ed25519_malabar_gcp"
+```
+
 This generates two files:
-- Private Key: `~/.ssh/id_ed25519_malabar_gcp` (Keep confidential!)
-- Public Key: `~/.ssh/id_ed25519_malabar_gcp.pub` (Upload to GCP)
+- Private Key: `id_ed25519_malabar_gcp` (Keep confidential!)
+- Public Key: `id_ed25519_malabar_gcp.pub` (Upload to GCP)
 
 ### Step 5.3: Provision Always Free `e2-micro` VM Instance
 1. Go to **Compute Engine** ➔ **VM Instances** ➔ **Create Instance**.
@@ -135,9 +145,12 @@ This generates two files:
    - `us-east1` (South Carolina)
    - `us-west1` (Oregon)
 4. **Machine Family**: General-purpose ➔ Series `E2` ➔ Machine Type `e2-micro` (0.25–2 vCPU, 1 GB RAM).
-5. **Boot Disk**: Change OS to `Ubuntu` ➔ `Ubuntu 24.04 LTS` ➔ Size `30 GB` Standard Persistent Disk.
-6. **SSH Keys**: Expand **SSH Keys** ➔ Paste contents of `id_ed25519_malabar_gcp.pub`.
+5. **Boot Disk**: Click **Change** ➔ Operating System: `Ubuntu` (or `Debian`) ➔ Boot Disk Type: **Standard persistent disk** (do NOT use *Balanced persistent disk*) ➔ Size: `30 GB`.
+6. **SSH Keys**: Expand **Advanced Options** ➔ **Security** ➔ **SSH Keys** ➔ Paste contents of `id_ed25519_malabar_gcp.pub`.
 7. Click **Create**. Note down the assigned **External Public IP**.
+
+> 💡 **Why does GCP Console show "Monthly estimate US$7.11"?**  
+> Google Cloud Console always displays the baseline list price before applying the **Always Free Tier discount**. As long as your instance is `e2-micro` in `us-central1`, `us-east1`, or `us-west1`, and uses **Standard persistent disk** (up to 30 GB), GCP automatically credits **$7.11/month (100% discount)** on your bill, resulting in **$0.00 actual cost**.
 
 ### Step 5.4: Configure 2 GB Swap File on Ubuntu VM
 Since `e2-micro` has 1 GB RAM, configure a 2 GB Linux Swap file to prevent memory pressure during Python dependency installation:
