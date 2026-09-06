@@ -94,9 +94,7 @@ class RiskEvaluator:
         return RiskLevel.LOW, []
 
     @classmethod
-    def evaluate_metrics(
-        cls, metrics: "PrecipitationMetrics"
-    ) -> tuple[RiskLevel, list[str]]:
+    def evaluate_metrics(cls, metrics: "PrecipitationMetrics") -> tuple[RiskLevel, list[str]]:
         """Convenience method to evaluate a PrecipitationMetrics instance directly."""
         return cls.evaluate_values(
             rainfall_24h=metrics.rainfall_24h,

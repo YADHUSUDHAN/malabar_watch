@@ -149,7 +149,6 @@ class RiskAssessmentService:
                         )
                         requires_alert = False
 
-
                 else:
                     state = EscalationState.DOWNGRADED
                     final_level = raw_level

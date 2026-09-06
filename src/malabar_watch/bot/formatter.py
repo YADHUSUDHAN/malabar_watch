@@ -37,9 +37,7 @@ def get_micro_zone_label(district_id: str) -> str:
     return norm.title()
 
 
-def format_alert_html(
-    assessment: RiskAssessment, advisory: BilingualAdvisory
-) -> str:
+def format_alert_html(assessment: RiskAssessment, advisory: BilingualAdvisory) -> str:
     """Formats an autonomous push alert into structured Telegram HTML.
 
     Args:
@@ -164,9 +162,7 @@ def format_history_html(district: str, records: list[dict[str, Any]]) -> str:
         lines.append(f"<code>{ts:<16} | {r1h:>4.1f} | {r24h:>5.1f} | {api:>5.1f}</code>")
 
     lines.append("───────────────────────────")
-    lines.append(
-        "💡 <i>High API (>100) indicates dangerous soil moisture saturation.</i>\n"
-    )
+    lines.append("💡 <i>High API (>100) indicates dangerous soil moisture saturation.</i>\n")
     lines.append(DISCLAIMER_FOOTNOTE)
     return "\n".join(lines)
 

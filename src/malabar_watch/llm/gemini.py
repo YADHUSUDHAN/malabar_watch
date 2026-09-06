@@ -65,7 +65,6 @@ class GeminiProvider:
             )
             return response.text or ""
 
-
         try:
             raw_text = await asyncio.wait_for(_call(), timeout=self.timeout)
             cleaned_json = sanitize_json_output(raw_text)

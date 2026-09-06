@@ -135,7 +135,6 @@ def generate_template_advisory(
             "സാധാരണ പ്രവർത്തനങ്ങൾ തുടരാം, ഔദ്യോഗിക കാലാവസ്ഥാ അറിയിപ്പുകൾ ശ്രദ്ധിക്കുക."
         )
 
-
     return BilingualAdvisory(
         district_id=assessment.district,
         risk_level=assessment.risk_level,

@@ -9,30 +9,31 @@
 
 ## 2. Component Design & Responsibilities
 
-### 2.1 Ingestion Engine (`src/ingestion/`)
+### 2.1 Ingestion Engine (`src/malabar_watch/ingestion/`)
 - Runs hourly via `systemd timer` or Python scheduler.
 - Fetches hourly precipitation data from Open-Meteo for defined district coordinates.
 - Calculates rolling metrics: 1h, 24h, 48h, 72h totals, and the Antecedent Precipitation Index (API).
 - Stores raw payloads and parsed values in SQLite.
 
-### 2.2 Risk Scoring Engine (`src/risk_engine/`)
-- Purely deterministic Python module (`scorer.py`).
-- Loads configured threshold rules from `thresholds.yaml`.
+### 2.2 Risk Scoring Engine (`src/malabar_watch/risk_engine/`)
+- Purely deterministic Python module (`evaluator.py`).
+- Loads configured geotechnical threshold rules from `config.py`.
 - Evaluates risk levels: `LOW`, `MODERATE`, `HIGH`, `SEVERE`.
 - Avoids delegating threshold math to the LLM to eliminate hallucination risk.
 
-### 2.3 Historical Context Store (`src/data/historical_events.json`)
+### 2.3 Historical Context Store (`src/malabar_watch/data/historical_events.json`)
 - Static JSON database containing landmark disaster metrics (e.g. Wayanad 2024, Pettimudi 2020, Kanjirappally 2021).
 - Used by the LLM layer to ground generated warnings in real regional historical context.
 
-### 2.4 Resilient LLM Layer (`src/llm/`)
+### 2.4 Resilient LLM Layer (`src/malabar_watch/llm/`)
 - Abstract `LLMProvider` base class with concrete implementations:
-  - `GeminiProvider` (Primary: `gemini-2.5-flash` or `gemini-1.5-flash`)
-  - `GroqProvider` (Fallback: `llama-3.3-70b-versatile`)
+  - `GeminiProvider` (Primary: `gemini-2.5-flash` / `gemini-3.6-flash`)
+  - `GroqProvider` (Fallback: `llama-3.3-70b-versatile` / `openai/gpt-oss-120b`)
 - Automatically falls back to Groq if Gemini returns an error (429 rate limit, 503 unavailable, or connection timeout >10s).
+- Deterministic template fallback activates if both external AI APIs are degraded.
 - Prompts the LLM to output a strict JSON payload containing English and Malayalam advisories.
 
-### 2.5 Telegram Bot Engine (`src/bot/`)
+### 2.5 Telegram Bot Engine (`src/malabar_watch/bot/`)
 - Async Python Telegram bot using long polling.
 - Zero inbound network ports open on the host machine.
 - Manages user subscriptions stored in SQLite.
@@ -40,7 +41,7 @@
 
 ---
 
-## 3. Database Schema (`src/db/schema.sql`)
+## 3. Database Storage (`src/malabar_watch/storage/`)
 
 ```sql
 -- Rainfall logs per district

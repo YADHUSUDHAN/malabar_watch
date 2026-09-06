@@ -59,9 +59,7 @@ class AlertDispatcher:
         Returns:
             Dictionary containing delivery stats: {'delivered': int, 'failed': int, 'total': int}
         """
-        subscribers = self.db.get_subscribers(
-            district_id=assessment.district, active_only=True
-        )
+        subscribers = self.db.get_subscribers(district_id=assessment.district, active_only=True)
         html_message = format_alert_html(assessment, advisory)
 
         delivered_count = 0
@@ -120,9 +118,7 @@ class AlertDispatcher:
                         )
                         delivered_count += 1
                     except Exception as retry_err:
-                        logger.error(
-                            "Failed retry dispatch to chat_id=%s: %s", chat_id, retry_err
-                        )
+                        logger.error("Failed retry dispatch to chat_id=%s: %s", chat_id, retry_err)
                         failed_count += 1
                 except TelegramError as e:
                     logger.error("Telegram error sending alert to chat_id=%s: %s", chat_id, e)

@@ -91,7 +91,6 @@ def test_sanitize_json_output(raw_input: str, expected_json: str) -> None:
 @pytest.mark.parametrize(
     "tier", [RiskLevel.LOW, RiskLevel.MODERATE, RiskLevel.HIGH, RiskLevel.SEVERE]
 )
-
 def test_deterministic_template_fallback_tiers(tier: RiskLevel) -> None:
     """Verify template generator produces valid bilingual output for all 4 tiers."""
     assessment = RiskAssessment(

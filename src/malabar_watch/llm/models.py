@@ -26,15 +26,9 @@ class BilingualAdvisory(BaseModel):
     summary_ml: str = Field(
         description="2-sentence clear overview of current rainfall and risk in Malayalam"
     )
-    advisory_en: str = Field(
-        description="Actionable safety guidance for residents in English"
-    )
-    advisory_ml: str = Field(
-        description="Actionable safety guidance for residents in Malayalam"
-    )
+    advisory_en: str = Field(description="Actionable safety guidance for residents in English")
+    advisory_ml: str = Field(description="Actionable safety guidance for residents in Malayalam")
     provider_used: str = Field(
         description="Provider fulfilling the request: 'gemini', 'groq', or 'template'"
     )
-    latency_ms: int = Field(
-        default=0, description="Round-trip response latency in milliseconds"
-    )
+    latency_ms: int = Field(default=0, description="Round-trip response latency in milliseconds")

@@ -24,4 +24,3 @@ def test_evaluate_risk_matrix(
     assert result.district == "Wayanad"
     assert result.rainfall_24h_mm == rainfall_24h
     assert "Wayanad" in result.description
-

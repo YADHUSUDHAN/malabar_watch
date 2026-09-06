@@ -70,9 +70,7 @@ class HistoricalEvent(BaseModel):
     )
     consequence: str = Field(description="Casualties and geotechnical damage impact")
     key_trigger: str = Field(description="Soil saturation / meteorological failure trigger")
-    analog_threshold_level: str = Field(
-        description="Analog risk level tier ('HIGH' or 'SEVERE')"
-    )
+    analog_threshold_level: str = Field(description="Analog risk level tier ('HIGH' or 'SEVERE')")
 
 
 class RiskAssessment(BaseModel):

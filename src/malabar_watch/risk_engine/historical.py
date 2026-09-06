@@ -81,9 +81,7 @@ class HistoricalContextStore:
         base_district = district.lower().split("_")[0].strip()
 
         # Find all historical events recorded for this district
-        district_matches = [
-            e for e in self._events if e.district.lower() == base_district
-        ]
+        district_matches = [e for e in self._events if e.district.lower() == base_district]
 
         if not district_matches:
             # Graceful None fallback when district has no historical match in database

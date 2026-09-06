@@ -76,4 +76,3 @@ DEFAULT_TARGETS: dict[str, DistrictTarget] = {
         longitude=76.8450,
     ),
 }
-

@@ -29,12 +29,8 @@ def get_action_keyboard(district: str) -> InlineKeyboardMarkup:
     """Generates quick action buttons for a district status view."""
     keyboard = [
         [
-            InlineKeyboardButton(
-                "🔔 Subscribe Alerts", callback_data=f"sub:{district}"
-            ),
-            InlineKeyboardButton(
-                "📊 72h History", callback_data=f"hist:{district}"
-            ),
+            InlineKeyboardButton("🔔 Subscribe Alerts", callback_data=f"sub:{district}"),
+            InlineKeyboardButton("📊 72h History", callback_data=f"hist:{district}"),
         ],
         [
             InlineKeyboardButton("🔄 Refresh Status", callback_data=f"status:{district}"),

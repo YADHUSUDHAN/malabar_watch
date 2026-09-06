@@ -91,6 +91,7 @@ async def test_dispatcher_live_delivery_and_blocked_user(
     mock_db, sample_assessment, sample_advisory
 ):
     mock_bot = MagicMock()
+
     # Let chat 101 succeed, chat 102 fail with Forbidden (blocked bot), chat 999 succeed
     async def send_side_effect(chat_id, **kwargs):
         if chat_id == 102:

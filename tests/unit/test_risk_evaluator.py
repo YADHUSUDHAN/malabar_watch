@@ -63,7 +63,6 @@ def test_precedence_rule_48h_dominant() -> None:
     assert any("48h rainfall (265.0mm) >= 250.0mm" in r for r in rules)
 
 
-
 @pytest.mark.unit
 def test_audit_rules_formatting() -> None:
     """Verify human-readable audit rules are cleanly generated."""

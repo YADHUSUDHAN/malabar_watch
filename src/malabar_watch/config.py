@@ -21,7 +21,6 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = Field(default="", description="Google Gemini API Key")
     GEMINI_MODEL: str = Field(default="gemini-3.6-flash", description="Primary LLM Model")
 
-
     GROQ_API_KEY: str = Field(default="", description="Groq API Key for Failover")
     GROQ_MODEL: str = Field(default="llama-3.3-70b-versatile", description="Fallback LLM Model")
 

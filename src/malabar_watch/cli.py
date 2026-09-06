@@ -81,9 +81,7 @@ async def run_test_ingestion() -> None:
 
 async def run_test_risk() -> None:
     """Evaluates deterministic landslide risk and historical precedent for all micro-zones."""
-    console.print(
-        "\n[bold cyan]Evaluating Deterministic Landslide Risk (SPEC-002)...[/bold cyan]"
-    )
+    console.print("\n[bold cyan]Evaluating Deterministic Landslide Risk (SPEC-002)...[/bold cyan]")
     ingest_service = DataIngestionService()
     risk_service = RiskAssessmentService()
 
@@ -96,7 +94,6 @@ async def run_test_risk() -> None:
         )
         now = datetime.now()
         metrics_dict = {
-
             "wayanad": PrecipitationMetrics(
                 district_id="wayanad",
                 timestamp=now,
@@ -201,7 +198,6 @@ async def run_test_llm() -> None:
         "\n[bold cyan]Synthesizing Bilingual Advisory via Dual-LLM Gateway "
         "(SPEC-003)...[/bold cyan]"
     )
-
 
     # Use an elevated simulated scenario (Wayanad SEVERE event) to verify full prompt & grounding
     assessment = evaluate_risk(
@@ -456,8 +452,5 @@ def main() -> int:
     return 0
 
 
-
-
 if __name__ == "__main__":
     sys.exit(main())
-

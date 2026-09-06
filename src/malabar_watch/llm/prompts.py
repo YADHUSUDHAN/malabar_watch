@@ -29,7 +29,6 @@ CRITICAL SAFETY INSTRUCTIONS:
 """
 
 
-
 def build_advisory_prompt(assessment: "RiskAssessment") -> str:
     """Builds a structured prompt from a deterministic RiskAssessment."""
     precedent_text = "None recorded for this condition."

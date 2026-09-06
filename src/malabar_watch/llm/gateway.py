@@ -76,8 +76,7 @@ class DualLLMGateway:
                 return advisory
             except Exception as e:
                 logger.warning(
-                    "Fallback LLM (Groq) failed: %s. "
-                    "Activating deterministic template fallback.",
+                    "Fallback LLM (Groq) failed: %s. Activating deterministic template fallback.",
                     e,
                 )
         else:
@@ -103,10 +102,7 @@ class DualLLMGateway:
 
         # Validate that all required text components are non-empty
         if not (summary_en and summary_ml and advisory_en and advisory_ml):
-            raise ValueError(
-                f"Incomplete advisory payload received from {provider.value}: {data}"
-            )
-
+            raise ValueError(f"Incomplete advisory payload received from {provider.value}: {data}")
 
         return BilingualAdvisory(
             district_id=assessment.district,

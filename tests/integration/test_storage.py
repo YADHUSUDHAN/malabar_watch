@@ -14,4 +14,3 @@ def test_schema_initialization(in_memory_db: sqlite3.Connection) -> None:
     assert "rainfall_observations" in tables
     assert "alerts_history" in tables
     assert "risk_assessments" in tables
-

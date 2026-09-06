@@ -428,9 +428,7 @@ class DatabaseManager:
             if should_close:
                 conn.close()
 
-    def remove_subscriber(
-        self, chat_id: int, conn: sqlite3.Connection | None = None
-    ) -> bool:
+    def remove_subscriber(self, chat_id: int, conn: sqlite3.Connection | None = None) -> bool:
         """Deactivates a subscriber (sets is_active = 0).
 
         Args:
