@@ -6,12 +6,14 @@ import sys
 from datetime import datetime
 
 from rich.console import Console
+from rich.panel import Panel
 from rich.table import Table
 
 from malabar_watch import __version__
 from malabar_watch.config import settings
 from malabar_watch.ingestion import DEFAULT_TARGETS, DataIngestionService
 from malabar_watch.ingestion.models import PrecipitationMetrics
+from malabar_watch.llm import DualLLMGateway
 from malabar_watch.risk_engine import (
     RiskAssessmentService,
     RiskLevel,
@@ -193,6 +195,65 @@ async def run_test_risk() -> None:
     )
 
 
+async def run_test_llm() -> None:
+    """Tests bilingual advisory synthesis via Gemini/Groq failover gateway."""
+    console.print(
+        "\n[bold cyan]Synthesizing Bilingual Advisory via Dual-LLM Gateway "
+        "(SPEC-003)...[/bold cyan]"
+    )
+
+
+    # Use an elevated simulated scenario (Wayanad SEVERE event) to verify full prompt & grounding
+    assessment = evaluate_risk(
+        district="wayanad",
+        rainfall_24h=215.0,
+        api_index=158.0,
+        rainfall_48h=365.0,
+        rainfall_1h=28.0,
+    )
+
+    gateway = DualLLMGateway()
+    advisory = await gateway.generate_advisory(assessment)
+
+    provider_colors = {
+        "gemini": "[bold blue]Google Gemini (Primary)[/bold blue]",
+        "groq": "[bold green]Groq Cloud (Fallback)[/bold green]",
+        "template": (
+            "[bold yellow]Deterministic Rule-Based Template (Offline Fallback)[/bold yellow]"
+        ),
+    }
+    provider_label = provider_colors.get(advisory.provider_used, advisory.provider_used)
+
+    target_obj = DEFAULT_TARGETS.get("wayanad", None)
+    micro_zone_label = target_obj.micro_zone if target_obj else ""
+
+    panel_content = (
+        f"[bold]Target Micro-Zone:[/bold] {advisory.district_id.title()} "
+        f"([dim]{micro_zone_label}[/dim])\n"
+        f"[bold]Risk Level:[/bold] {advisory.risk_level.badge}\n"
+        f"[bold]LLM Provider Used:[/bold] {provider_label}  |  "
+        f"[bold]Latency:[/bold] {advisory.latency_ms}ms\n\n"
+        f"[bold cyan]── English Advisory (ഇംഗ്ലീഷ്) ──[/bold cyan]\n"
+        f"[bold]Summary:[/bold] {advisory.summary_en}\n"
+        f"[bold]Action Guidance:[/bold] {advisory.advisory_en}\n\n"
+        f"[bold yellow]── Malayalam Advisory (മലയാളം) ──[/bold yellow]\n"
+        f"[bold]സംഗ്രഹം:[/bold] {advisory.summary_ml}\n"
+        f"[bold]നിർദ്ദേശം:[/bold] {advisory.advisory_ml}"
+    )
+
+    console.print(
+        Panel(
+            panel_content,
+            title="[bold magenta]Malabar Watch - Bilingual Early Warning Advisory[/bold magenta]",
+            border_style="cyan",
+        )
+    )
+    console.print(
+        "[bold green]✓ LLM synthesis complete. Grounded, verified bilingual payload ready "
+        "for broadcast.[/bold green]\n"
+    )
+
+
 def main() -> int:
     """CLI Entry point for Malabar Watch agent."""
     parser = argparse.ArgumentParser(
@@ -208,11 +269,16 @@ def main() -> int:
         action="store_true",
         help="Run deterministic risk scoring and historical grounding across all micro-zones",
     )
-    # Also support positional argument "test-ingest" or "test-risk"
+    parser.add_argument(
+        "--test-llm",
+        action="store_true",
+        help="Test resilient bilingual advisory generation via Gemini / Groq / Template gateway",
+    )
+    # Also support positional argument
     parser.add_argument(
         "command",
         nargs="?",
-        choices=["test-ingest", "test-risk"],
+        choices=["test-ingest", "test-risk", "test-llm"],
         help="Optional sub-command to execute",
     )
 
@@ -230,6 +296,10 @@ def main() -> int:
         asyncio.run(run_test_risk())
         return 0
 
+    if args.test_llm or args.command == "test-llm":
+        asyncio.run(run_test_llm())
+        return 0
+
     # Default quick demonstration assessment
     sample = evaluate_risk("Wayanad", 165.0, 110.0)
     console.print(
@@ -238,7 +308,12 @@ def main() -> int:
     )
     console.print("\n[dim]Run 'malabar-watch --test-ingest' to test live Open-Meteo polling.[/dim]")
     console.print("[dim]Run 'malabar-watch --test-risk' to test deterministic risk engine.[/dim]")
+    console.print(
+        "[dim]Run 'malabar-watch --test-llm' to test bilingual LLM advisory synthesis.[/dim]"
+    )
     return 0
+
+
 
 
 if __name__ == "__main__":

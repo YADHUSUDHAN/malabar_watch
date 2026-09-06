@@ -1,7 +1,7 @@
 # Feature Spec: Deterministic Risk Scoring & Historical Disaster Context Engine
 
 - **Spec ID**: `SPEC-002`
-- **Status**: Approved
+- **Status**: Implemented
 - **Owner**: Malabar Watch Engineering
 - **Target Release**: `v0.1.0`
 - **Dependencies**: `SPEC-001` (Data Ingestion Engine), `SQLite Storage Engine`
@@ -108,12 +108,12 @@ When a risk assessment reaches `HIGH` or `SEVERE`, the engine matches and attach
 - **US-3 (Historical Grounding)**: As an early-warning reader, I want regional historical disaster comparisons so that the urgency of the warning is immediately understood.
 
 ### Detailed Acceptance Criteria
-- [ ] **AC-1 (Scoring Rules)**: Implement `evaluate_metrics(metrics: PrecipitationMetrics) -> RiskAssessment` strictly adhering to the 4-tier matrix ($R_{24\text{h}}, R_{48\text{h}}, API$).
-- [ ] **AC-2 (Rule Auditing)**: Every assessment must record human-readable `triggered_rules` explaining exactly why the level was assigned (e.g. `["24h rainfall (162.0mm) >= 100.0mm", "API index (112.5) >= 100.0"]`).
-- [ ] **AC-3 (State Transitions)**: Query the latest assessment from SQLite, compare against the new result, and calculate `EscalationState` (`FIRST_ASSESSMENT`, `ESCALATED`, `SUSTAINED`, `DOWNGRADED`).
-- [ ] **AC-4 (Historical Context Store)**: Package and load `data/historical_events.json`. Attach matching historical precedent for `HIGH` and `SEVERE` states.
-- [ ] **AC-5 (Database Persistence)**: Create table `risk_assessments` in SQLite and implement `save_assessment` and `get_latest_assessment`.
-- [ ] **AC-6 (CLI Verification)**: Add `malabar-watch --test-risk` CLI command that runs risk evaluation on live or synthetic metrics and outputs formatted Rich tables.
+- [x] **AC-1 (Scoring Rules)**: Implement `evaluate_metrics(metrics: PrecipitationMetrics) -> RiskAssessment` strictly adhering to the 4-tier matrix ($R_{24\text{h}}, R_{48\text{h}}, API$).
+- [x] **AC-2 (Rule Auditing)**: Every assessment must record human-readable `triggered_rules` explaining exactly why the level was assigned (e.g. `["24h rainfall (162.0mm) >= 100.0mm", "API index (112.5) >= 100.0"]`).
+- [x] **AC-3 (State Transitions)**: Query the latest assessment from SQLite, compare against the new result, and calculate `EscalationState` (`FIRST_ASSESSMENT`, `ESCALATED`, `SUSTAINED`, `DOWNGRADED`).
+- [x] **AC-4 (Historical Context Store)**: Package and load `data/historical_events.json`. Attach matching historical precedent for `HIGH` and `SEVERE` states.
+- [x] **AC-5 (Database Persistence)**: Create table `risk_assessments` in SQLite and implement `save_assessment` and `get_latest_assessment`.
+- [x] **AC-6 (CLI Verification)**: Add `malabar-watch --test-risk` CLI command that runs risk evaluation on live or synthetic metrics and outputs formatted Rich tables.
 
 ---
 

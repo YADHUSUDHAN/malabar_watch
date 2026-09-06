@@ -1,21 +1,16 @@
-"""LLM Gateway package supporting primary (Gemini) and fallback (Groq) reasoning."""
+"""LLM Gateway package supporting primary (Gemini), fallback (Groq), and template reasoning."""
 
+from malabar_watch.llm.gateway import DualLLMGateway
+from malabar_watch.llm.gemini import GeminiProvider
+from malabar_watch.llm.groq import GroqProvider
+from malabar_watch.llm.models import BilingualAdvisory, LLMProviderType
+from malabar_watch.llm.templates import generate_template_advisory
 
-class DualLLMGateway:
-    """Resilient gateway that routes prompt requests to Google Gemini with failover to Groq."""
-
-    def __init__(
-        self,
-        gemini_key: str | None = None,
-        groq_key: str | None = None,
-    ) -> None:
-        self.gemini_key = gemini_key
-        self.groq_key = groq_key
-
-    async def generate_bilingual_advisory(self, prompt: str) -> dict[str, str]:
-        """Placeholder method for bilingual (English + Malayalam) generation."""
-        return {
-            "english": "Bilingual advisory generator initialized.",
-            "malayalam": "ദ്വിഭാഷാ മുന്നറിയിപ്പ് സംവിധാനം സജ്ജമാക്കി.",
-            "provider_used": "mock",
-        }
+__all__ = [
+    "BilingualAdvisory",
+    "DualLLMGateway",
+    "GeminiProvider",
+    "GroqProvider",
+    "LLMProviderType",
+    "generate_template_advisory",
+]
