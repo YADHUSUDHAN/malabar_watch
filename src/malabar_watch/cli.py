@@ -254,6 +254,106 @@ async def run_test_llm() -> None:
     )
 
 
+async def run_test_bot() -> None:
+    """Simulates Telegram bot HTML formatting and alert broadcast dispatch."""
+    from malabar_watch.bot import AlertDispatcher, format_alert_html, format_welcome_html
+    from malabar_watch.storage import DatabaseManager
+
+    console.print("\n[bold cyan]Simulating Telegram Bot Dispatch & Formatting (SPEC-004)...[/bold cyan]")
+    db_path = settings.DATABASE_URL.replace("sqlite:///", "")
+    db = DatabaseManager(db_path=db_path)
+    db.initialize_schema()
+
+    # Register demo subscribers for simulation
+    db.add_subscriber(chat_id=1001, district_id="wayanad")
+    db.add_subscriber(chat_id=1002, district_id="idukki")
+    db.add_subscriber(chat_id=9999, district_id="all")
+
+    # Sample assessment
+    now = datetime.now()
+    metrics = PrecipitationMetrics(
+        district_id="wayanad",
+        rainfall_1h=32.0,
+        rainfall_24h=218.0,
+        rainfall_48h=312.0,
+        rainfall_72h=360.0,
+        antecedent_index=162.0,
+        timestamp=now,
+    )
+    risk_service = RiskAssessmentService(db_manager=db)
+    assessment = risk_service.assess_metrics(metrics)
+
+    gateway = DualLLMGateway()
+    advisory = await gateway.generate_advisory(assessment)
+
+    # Format HTML
+    html_msg = format_alert_html(assessment, advisory)
+
+    console.print(
+        Panel(
+            html_msg,
+            title="[bold blue]Simulated Telegram HTML Payload (SPEC-004)[/bold blue]",
+            border_style="green",
+        )
+    )
+
+    dispatcher = AlertDispatcher(db=db)
+    stats = await dispatcher.dispatch_alert(
+        assessment=assessment,
+        advisory=advisory,
+        dry_run=True,
+    )
+
+    console.print(
+        f"[bold green]✓ Simulated Dispatch Complete:[/bold green] "
+        f"Delivered: {stats['delivered']} | Failed: {stats['failed']} | Total Target Subs: {stats['total']}\n"
+    )
+
+
+def run_bot() -> None:
+    """Runs the live Telegram bot using outbound long polling."""
+    from malabar_watch.bot import TelegramBotService
+
+    if not settings.TELEGRAM_BOT_TOKEN:
+        console.print(
+            "[bold red]Error: TELEGRAM_BOT_TOKEN is not set.[/bold red]\n"
+            "Please create a bot with @BotFather and set TELEGRAM_BOT_TOKEN in your .env file."
+        )
+        sys.exit(1)
+
+    service = TelegramBotService()
+    console.print("[bold green]Starting Malabar Watch Telegram bot daemon (Long Polling)...[/bold green]")
+    service.run_polling()
+
+
+async def run_pipeline(dry_run: bool = True) -> None:
+    """Executes a complete single-pass cycle of the autonomous pipeline."""
+    from malabar_watch.pipeline import PipelineRunner
+
+    console.print("\n[bold cyan]Executing Full Autonomous Pipeline Cycle (SPEC 001-004)...[/bold cyan]")
+    runner = PipelineRunner()
+    results = await runner.run_cycle(dry_run=dry_run, force_alert=True)
+
+    table = Table(title="Pipeline Execution Summary", border_style="cyan")
+    table.add_column("District", style="bold")
+    table.add_column("Risk Level")
+    table.add_column("Escalation")
+    table.add_column("Advisory Synthesized")
+    table.add_column("Dispatched")
+
+    for district_id, res in results.items():
+        table.add_row(
+            district_id.title(),
+            res.get("risk_level", "N/A"),
+            res.get("escalation_state", "N/A"),
+            "✓" if "advisory" in res else "-",
+            "✓" if res.get("dispatched") else "-",
+        )
+
+    console.print(table)
+    console.print("[bold green]✓ Pipeline cycle completed successfully.[/bold green]\n")
+
+
 def main() -> int:
     """CLI Entry point for Malabar Watch agent."""
     parser = argparse.ArgumentParser(
@@ -274,11 +374,26 @@ def main() -> int:
         action="store_true",
         help="Test resilient bilingual advisory generation via Gemini / Groq / Template gateway",
     )
+    parser.add_argument(
+        "--test-bot",
+        action="store_true",
+        help="Simulate Telegram HTML formatting and subscriber broadcast dispatch",
+    )
+    parser.add_argument(
+        "--bot",
+        action="store_true",
+        help="Start the Telegram bot daemon in outbound long-polling mode (Zero Inbound Ports)",
+    )
+    parser.add_argument(
+        "--run-pipeline",
+        action="store_true",
+        help="Execute a single full pipeline cycle (Ingest -> Risk -> LLM -> Telegram Dispatch)",
+    )
     # Also support positional argument
     parser.add_argument(
         "command",
         nargs="?",
-        choices=["test-ingest", "test-risk", "test-llm"],
+        choices=["test-ingest", "test-risk", "test-llm", "test-bot", "bot", "run-pipeline"],
         help="Optional sub-command to execute",
     )
 
@@ -300,17 +415,31 @@ def main() -> int:
         asyncio.run(run_test_llm())
         return 0
 
+    if args.test_bot or args.command == "test-bot":
+        asyncio.run(run_test_bot())
+        return 0
+
+    if args.bot or args.command == "bot":
+        run_bot()
+        return 0
+
+    if args.run_pipeline or args.command == "run-pipeline":
+        asyncio.run(run_pipeline(dry_run=True))
+        return 0
+
     # Default quick demonstration assessment
     sample = evaluate_risk("Wayanad", 165.0, 110.0)
     console.print(
         f"[yellow]Sample Assessment:[/yellow] {sample.district} -> "
         f"Risk Level: [bold red]{sample.risk_level.value}[/bold red]"
     )
-    console.print("\n[dim]Run 'malabar-watch --test-ingest' to test live Open-Meteo polling.[/dim]")
-    console.print("[dim]Run 'malabar-watch --test-risk' to test deterministic risk engine.[/dim]")
-    console.print(
-        "[dim]Run 'malabar-watch --test-llm' to test bilingual LLM advisory synthesis.[/dim]"
-    )
+    console.print("\n[dim]Commands available:[/dim]")
+    console.print("  [dim]• malabar-watch --test-ingest   (Test Open-Meteo polling)[/dim]")
+    console.print("  [dim]• malabar-watch --test-risk     (Test deterministic risk engine)[/dim]")
+    console.print("  [dim]• malabar-watch --test-llm      (Test bilingual LLM advisory)[/dim]")
+    console.print("  [dim]• malabar-watch --test-bot      (Simulate Telegram alert broadcast)[/dim]")
+    console.print("  [dim]• malabar-watch --run-pipeline  (Run full end-to-end cycle)[/dim]")
+    console.print("  [dim]• malabar-watch --bot           (Start live Telegram bot daemon)[/dim]")
     return 0
 
 

@@ -82,20 +82,43 @@ def compute_derived_metrics(
     district_id: str,
     hourly_data: HourlyPrecipitationData,
     alpha: float = 0.85,
+    reference_time: datetime | None = None,
 ) -> PrecipitationMetrics:
     """Transforms raw Open-Meteo time-series data into structured multi-window metrics.
+
+    Only observations up to `reference_time` (default: current local time) are considered,
+    preventing future forecast hours returned by Open-Meteo from skewing observed totals.
 
     Args:
         district_id: Identifier of the district (e.g. 'wayanad').
         hourly_data: Raw parsed timestamps and precipitation arrays.
         alpha: Decay factor for Antecedent Precipitation Index.
+        reference_time: Optional cutoff timestamp (defaults to current local time).
 
     Returns:
         Structured PrecipitationMetrics ready for persistence and risk assessment.
     """
-    sanitized_precip = sanitize_precipitation_series(hourly_data.precipitation)
+    cutoff = reference_time or datetime.now()
 
-    latest_timestamp = hourly_data.timestamps[-1] if hourly_data.timestamps else datetime.now()
+    # Filter out future forecast timestamps if present
+    if hourly_data.timestamps and any(t > cutoff for t in hourly_data.timestamps):
+        valid_pairs = [
+            (t, p)
+            for t, p in zip(hourly_data.timestamps, hourly_data.precipitation, strict=False)
+            if t <= cutoff
+        ]
+        if valid_pairs:
+            filtered_timestamps = [t for t, _ in valid_pairs]
+            filtered_precip = [p for _, p in valid_pairs]
+        else:
+            filtered_timestamps = hourly_data.timestamps[:1]
+            filtered_precip = hourly_data.precipitation[:1]
+    else:
+        filtered_timestamps = hourly_data.timestamps
+        filtered_precip = hourly_data.precipitation
+
+    sanitized_precip = sanitize_precipitation_series(filtered_precip)
+    latest_timestamp = filtered_timestamps[-1] if filtered_timestamps else cutoff
 
     r1h = calculate_rolling_total(sanitized_precip, hours=1)
     r24h = calculate_rolling_total(sanitized_precip, hours=24)

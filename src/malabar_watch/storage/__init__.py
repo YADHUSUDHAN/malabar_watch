@@ -89,6 +89,26 @@ class DatabaseManager:
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                     );
                 """)
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS subscribers (
+                        chat_id INTEGER PRIMARY KEY,
+                        district_id TEXT NOT NULL DEFAULT 'all',
+                        is_active INTEGER NOT NULL DEFAULT 1,
+                        subscribed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+                """)
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS alert_logs (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        district_id TEXT NOT NULL,
+                        risk_level TEXT NOT NULL,
+                        assessment_id INTEGER,
+                        dispatched_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        delivered_count INTEGER NOT NULL DEFAULT 0,
+                        failed_count INTEGER NOT NULL DEFAULT 0
+                    );
+                """)
         finally:
             if should_close:
                 conn.close()
@@ -166,14 +186,15 @@ class DatabaseManager:
                 should_close = True
 
         try:
+            now_iso = datetime.now().isoformat()
             cursor = conn.execute(
                 """
                 SELECT * FROM rainfall_observations
-                WHERE district = ?
+                WHERE district = ? AND timestamp <= ?
                 ORDER BY timestamp DESC
                 LIMIT 1;
                 """,
-                (district,),
+                (district, now_iso),
             )
             row = cursor.fetchone()
             if row:
@@ -366,6 +387,210 @@ class DatabaseManager:
                 if isinstance(val, datetime):
                     return val
             return None
+        finally:
+            if should_close:
+                conn.close()
+
+    def add_subscriber(
+        self, chat_id: int, district_id: str = "all", conn: sqlite3.Connection | None = None
+    ) -> bool:
+        """Registers or re-activates a subscriber for a district or all districts.
+
+        Args:
+            chat_id: Unique Telegram chat ID.
+            district_id: Target district identifier ('all', 'wayanad', 'idukki', 'kottayam').
+            conn: Optional existing connection.
+
+        Returns:
+            True if inserted or updated.
+        """
+        should_close = False
+        if conn is None:
+            conn = self.get_connection()
+            if self._shared_conn is None:
+                should_close = True
+
+        try:
+            with conn:
+                conn.execute(
+                    """
+                    INSERT INTO subscribers (chat_id, district_id, is_active, updated_at)
+                    VALUES (?, ?, 1, CURRENT_TIMESTAMP)
+                    ON CONFLICT(chat_id) DO UPDATE SET
+                        district_id = excluded.district_id,
+                        is_active = 1,
+                        updated_at = CURRENT_TIMESTAMP;
+                    """,
+                    (chat_id, district_id.lower().strip()),
+                )
+                return True
+        finally:
+            if should_close:
+                conn.close()
+
+    def remove_subscriber(
+        self, chat_id: int, conn: sqlite3.Connection | None = None
+    ) -> bool:
+        """Deactivates a subscriber (sets is_active = 0).
+
+        Args:
+            chat_id: Unique Telegram chat ID.
+            conn: Optional existing connection.
+
+        Returns:
+            True if subscriber was deactivated, False if not found.
+        """
+        should_close = False
+        if conn is None:
+            conn = self.get_connection()
+            if self._shared_conn is None:
+                should_close = True
+
+        try:
+            with conn:
+                cursor = conn.execute(
+                    """
+                    UPDATE subscribers
+                    SET is_active = 0, updated_at = CURRENT_TIMESTAMP
+                    WHERE chat_id = ? AND is_active = 1;
+                    """,
+                    (chat_id,),
+                )
+                return cursor.rowcount > 0
+        finally:
+            if should_close:
+                conn.close()
+
+    def get_subscriber(
+        self, chat_id: int, conn: sqlite3.Connection | None = None
+    ) -> dict[str, Any] | None:
+        """Fetches subscription details for a specific chat ID."""
+        should_close = False
+        if conn is None:
+            conn = self.get_connection()
+            if self._shared_conn is None:
+                should_close = True
+
+        try:
+            cursor = conn.execute(
+                "SELECT * FROM subscribers WHERE chat_id = ?;",
+                (chat_id,),
+            )
+            row = cursor.fetchone()
+            return dict(row) if row else None
+        finally:
+            if should_close:
+                conn.close()
+
+    def get_subscribers(
+        self,
+        district_id: str | None = None,
+        active_only: bool = True,
+        conn: sqlite3.Connection | None = None,
+    ) -> list[dict[str, Any]]:
+        """Retrieves subscribers, optionally filtered by district or active state.
+
+        If district_id is supplied, subscribers subscribed specifically to that district
+        AND subscribers subscribed to 'all' are returned.
+        """
+        should_close = False
+        if conn is None:
+            conn = self.get_connection()
+            if self._shared_conn is None:
+                should_close = True
+
+        try:
+            query = "SELECT * FROM subscribers WHERE 1=1"
+            params: list[Any] = []
+
+            if active_only:
+                query += " AND is_active = 1"
+
+            if district_id:
+                norm_d = district_id.lower().strip()
+                query += " AND (district_id = ? OR district_id = 'all')"
+                params.append(norm_d)
+
+            cursor = conn.execute(query, params)
+            return [dict(row) for row in cursor.fetchall()]
+        finally:
+            if should_close:
+                conn.close()
+
+    def log_alert_dispatch(
+        self,
+        district_id: str,
+        risk_level: str,
+        assessment_id: int | None = None,
+        delivered_count: int = 0,
+        failed_count: int = 0,
+        conn: sqlite3.Connection | None = None,
+    ) -> int:
+        """Logs an alert dispatch event for audit trails and verification."""
+        should_close = False
+        if conn is None:
+            conn = self.get_connection()
+            if self._shared_conn is None:
+                should_close = True
+
+        try:
+            with conn:
+                cursor = conn.execute(
+                    """
+                    INSERT INTO alert_logs (
+                        district_id,
+                        risk_level,
+                        assessment_id,
+                        delivered_count,
+                        failed_count
+                    ) VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        district_id,
+                        risk_level,
+                        assessment_id,
+                        delivered_count,
+                        failed_count,
+                    ),
+                )
+                return cursor.lastrowid or 0
+        finally:
+            if should_close:
+                conn.close()
+
+    def get_rainfall_history(
+        self, district: str, hours: int = 72, conn: sqlite3.Connection | None = None
+    ) -> list[dict[str, Any]]:
+        """Retrieves recent hourly rainfall records for a given district.
+
+        Args:
+            district: Target district ID.
+            hours: Maximum number of trailing hourly observations.
+            conn: Optional existing connection.
+
+        Returns:
+            List of observation records ordered newest first.
+        """
+        should_close = False
+        if conn is None:
+            conn = self.get_connection()
+            if self._shared_conn is None:
+                should_close = True
+
+        try:
+            now_iso = datetime.now().isoformat()
+            cursor = conn.execute(
+                """
+                SELECT district, timestamp, precipitation_mm, rainfall_24h,
+                       rainfall_48h, rainfall_72h, antecedent_index
+                FROM rainfall_observations
+                WHERE district = ? AND timestamp <= ?
+                ORDER BY timestamp DESC
+                LIMIT ?;
+                """,
+                (district.lower().strip(), now_iso, hours),
+            )
+            return [dict(row) for row in cursor.fetchall()]
         finally:
             if should_close:
                 conn.close()
