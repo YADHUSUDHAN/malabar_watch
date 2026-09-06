@@ -1,0 +1,14 @@
+[Unit]
+Description=Hourly Timer for Malabar Watch Autonomous Early-Warning Pipeline
+Documentation=https://github.com/YADHUSUDHAN/malabar_watch
+
+[Timer]
+# Trigger at the start of every hour (e.g. 01:00, 02:00, 03:00...)
+OnCalendar=*-*-* *:00:00
+# Run immediately if the last trigger was missed (e.g. due to server reboot)
+Persistent=true
+# Unit to trigger
+Unit=malabar-watch-pipeline.service
+
+[Install]
+WantedBy=timers.target

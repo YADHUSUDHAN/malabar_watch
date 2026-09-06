@@ -1,0 +1,29 @@
+[Unit]
+Description=Malabar Watch Telegram Bot Daemon (Long Polling)
+Documentation=https://github.com/YADHUSUDHAN/malabar_watch
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=malabarwatch
+Group=malabarwatch
+WorkingDirectory=/opt/malabar_watch
+EnvironmentFile=-/opt/malabar_watch/.env
+ExecStart=/usr/local/bin/uv run malabar-watch --bot
+Restart=always
+RestartSec=10s
+
+# Sandboxing & Security hardening
+ProtectSystem=full
+ProtectHome=read-only
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=malabar-watch-bot
+
+[Install]
+WantedBy=multi-user.target

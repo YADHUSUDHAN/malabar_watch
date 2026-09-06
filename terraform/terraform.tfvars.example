@@ -1,0 +1,16 @@
+# ==============================================================================
+# Terraform Variables Example - Malabar Watch
+# Copy this file to terraform.tfvars to customize your settings
+# ==============================================================================
+
+# Target AWS Region (ap-south-1 = Mumbai)
+aws_region = "ap-south-1"
+
+# EC2 Instance Type (t3.micro or t2.micro are AWS Free Tier eligible)
+instance_type = "t3.micro"
+
+# Root volume size in GB (Free tier covers up to 30 GB gp3)
+disk_size_gb = 30
+
+# Project tag prefix
+project_tag = "malabar-watch"

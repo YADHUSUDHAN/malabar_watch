@@ -1,12 +1,12 @@
 # Malabar Watch (മലബാർ വാച്ച്)
 ### AI-Powered Rainfall & Landslide Early-Warning Agent for Kerala
 
-[![Project Status: Planning](https://img.shields.io/badge/status-planning--phase-blue)](./docs/ARCHITECTURE.md)
-[![Recurring Infrastructure Cost](https://img.shields.io/badge/cost-%E2%82%B90%2Fmonth-brightgreen)](./docs/INFRA_AND_SECURITY.md)
-[![Data Provider: Open--Meteo](https://img.shields.io/badge/data-Open--Meteo-orange)](./docs/DATA_INGESTION_SPEC.md)
-[![LLM Primary: Gemini](https://img.shields.io/badge/LLM-Google%20Gemini-blue)](./docs/LLM_PROMPT_ENGINEERING.md)
-[![LLM Fallback: Groq](https://img.shields.io/badge/Fallback-Groq%20LLaMA--3.3-purple)](./docs/LLM_PROMPT_ENGINEERING.md)
-[![Cloud: AWS EC2 Free Tier](https://img.shields.io/badge/cloud-AWS%20EC2%20Free%20Tier-orange)](./docs/INFRA_AND_SECURITY.md)
+[![Project Status: Production Ready](https://img.shields.io/badge/status-production--ready-brightgreen)](./docs/ARCHITECTURE.md)
+[![Tests: 82 Passed](https://img.shields.io/badge/tests-82%20passed-brightgreen)](./tests)
+[![IaC: Terraform](https://img.shields.io/badge/IaC-Terraform-blueviolet)](./terraform)
+[![Deployment Guide](https://img.shields.io/badge/guide-AWS%20Zero--Trust%20Deployment-blue)](./docs/AWS_TERRAFORM_BEGINNER_GUIDE.md)
+[![Cost](https://img.shields.io/badge/cost-%E2%82%B90%2Fmonth-brightgreen)](./docs/INFRA_AND_SECURITY.md)
+[![LLM: Gemini + Groq](https://img.shields.io/badge/LLM-Gemini%20%2B%20Groq%20Failover-purple)](./docs/LLM_PROMPT_ENGINEERING.md)
 
 **Malabar Watch** is a self-hosted, near-zero-cost AI early-warning agent monitoring extreme rainfall and landslide risks across vulnerable Kerala districts (Wayanad, Idukki, Kottayam). The agent evaluates cumulative rainfall metrics, reasons over historical disaster context using **Google Gemini** (with **Groq** automatic failover), and pushes plain-language **bilingual warnings (English + Malayalam)** over Telegram.
 
