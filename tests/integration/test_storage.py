@@ -13,3 +13,5 @@ def test_schema_initialization(in_memory_db: sqlite3.Connection) -> None:
     tables = [row[0] for row in cursor.fetchall()]
     assert "rainfall_observations" in tables
     assert "alerts_history" in tables
+    assert "risk_assessments" in tables
+

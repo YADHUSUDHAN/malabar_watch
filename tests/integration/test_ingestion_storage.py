@@ -86,9 +86,9 @@ async def test_data_ingestion_service_process_all_and_deduplication() -> None:
         assert "kottayam" in results
 
         cursor = conn.execute("SELECT COUNT(*) FROM rainfall_observations;")
-        assert cursor.fetchone()[0] == 3
+        assert cursor.fetchone()[0] == len(DEFAULT_TARGETS)
 
         # Running again with identical timestamp updates rather than inserting duplicates
         await service.fetch_and_process_all()
         cursor = conn.execute("SELECT COUNT(*) FROM rainfall_observations;")
-        assert cursor.fetchone()[0] == 3
+        assert cursor.fetchone()[0] == len(DEFAULT_TARGETS)

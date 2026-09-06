@@ -1,0 +1,68 @@
+[
+  {
+    "event_id": "wayanad_2024",
+    "district": "wayanad",
+    "location": "Chooralmala / Mundakkai / Attamala / Meppadi",
+    "date": "July 2024",
+    "rainfall_24h_mm": 372.0,
+    "rainfall_48h_mm": 572.0,
+    "consequence": "Catastrophic debris flow along Vellarimala hills, 250+ fatalities, extensive destruction of settlements",
+    "key_trigger": "Pre-saturated laterite soil overwhelmed by torrential single-day cloudburst",
+    "analog_threshold_level": "SEVERE"
+  },
+  {
+    "event_id": "idukki_2020",
+    "district": "idukki",
+    "location": "Pettimudi / Rajamala (Munnar)",
+    "date": "August 2020",
+    "rainfall_24h_mm": 616.2,
+    "rainfall_48h_mm": 450.0,
+    "consequence": "Massive hill collapse on tea estate worker settlement, 66 fatalities",
+    "key_trigger": "Sustained multi-day monsoonal deluge saturating steep granite-soil interface",
+    "analog_threshold_level": "SEVERE"
+  },
+  {
+    "event_id": "idukki_2026",
+    "district": "idukki",
+    "location": "Vagamon (Kolahalamedu) / Adoormala (Kudayathoor) / Elappara",
+    "date": "August 2026",
+    "rainfall_24h_mm": 225.0,
+    "rainfall_48h_mm": 340.0,
+    "consequence": "Fatal slope failures in Kolahalamedu and Adoormala, mudslide at Chemmannu, NH-85 corridor blockages",
+    "key_trigger": "Intense monsoonal downpours triggering simultaneous slope failures across Peerumade and Thodupuzha ranges",
+    "analog_threshold_level": "SEVERE"
+  },
+  {
+    "event_id": "kottayam_2021",
+    "district": "kottayam",
+    "location": "Koottickal (Plappalli, Kavali) / Teekoy / Mundakkayam",
+    "date": "October 2021",
+    "rainfall_24h_mm": 185.0,
+    "rainfall_48h_mm": 220.0,
+    "consequence": "13 fatalities in Koottickal, flash floods, debris torrents along Manimala river basin",
+    "key_trigger": "Extreme short-duration mini-cloudburst (>50mm in 2 hours) on Western Ghats foothills",
+    "analog_threshold_level": "HIGH"
+  },
+  {
+    "event_id": "kottayam_2026",
+    "district": "kottayam",
+    "location": "Payyanithottam (Poonjar Thekkekara) / Teekoy",
+    "date": "August 2026",
+    "rainfall_24h_mm": 215.0,
+    "rainfall_48h_mm": 310.0,
+    "consequence": "Fatal debris flow in Payyanithottam burying residence claiming 2 lives, multiple hillside slips in Teekoy",
+    "key_trigger": "Torrential monsoon burst saturating fragile high-range Western Ghats foothill slopes",
+    "analog_threshold_level": "SEVERE"
+  },
+  {
+    "event_id": "wayanad_2019",
+    "district": "wayanad",
+    "location": "Puthumala / Meppadi",
+    "date": "August 2019",
+    "rainfall_24h_mm": 500.0,
+    "rainfall_48h_mm": 580.0,
+    "consequence": "Massive debris flow across tea plantation and settlement, 17 fatalities",
+    "key_trigger": "Pre-saturated highland terrain overwhelmed by sustained monsoon downpours",
+    "analog_threshold_level": "SEVERE"
+  }
+]

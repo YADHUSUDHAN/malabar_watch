@@ -49,16 +49,31 @@ DEFAULT_TARGETS: dict[str, DistrictTarget] = {
     ),
     "idukki": DistrictTarget(
         district_id="idukki",
-        name="Idukki",
+        name="Idukki (North / High Range)",
         micro_zone="Munnar / Devikulam / Pettimudi",
         latitude=10.0889,
         longitude=77.0595,
     ),
+    "idukki_peerumade": DistrictTarget(
+        district_id="idukki_peerumade",
+        name="Idukki (South / Peerumade)",
+        micro_zone="Vagamon / Elappara / Kudayathoor",
+        latitude=9.6850,
+        longitude=76.9050,
+    ),
     "kottayam": DistrictTarget(
         district_id="kottayam",
-        name="Kottayam",
+        name="Kottayam (Highland)",
         micro_zone="Teekoy / Erattupetta / Kanjirappally",
         latitude=9.6896,
         longitude=76.8160,
     ),
+    "kottayam_poonjar": DistrictTarget(
+        district_id="kottayam_poonjar",
+        name="Kottayam (Poonjar Ridge)",
+        micro_zone="Payyanithottam / Poonjar Thekkekara",
+        latitude=9.6920,
+        longitude=76.8450,
+    ),
 }
+

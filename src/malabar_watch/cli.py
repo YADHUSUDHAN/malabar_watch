@@ -3,6 +3,7 @@
 import argparse
 import asyncio
 import sys
+from datetime import datetime
 
 from rich.console import Console
 from rich.table import Table
@@ -10,7 +11,12 @@ from rich.table import Table
 from malabar_watch import __version__
 from malabar_watch.config import settings
 from malabar_watch.ingestion import DEFAULT_TARGETS, DataIngestionService
-from malabar_watch.risk_engine import evaluate_risk
+from malabar_watch.ingestion.models import PrecipitationMetrics
+from malabar_watch.risk_engine import (
+    RiskAssessmentService,
+    RiskLevel,
+    evaluate_risk,
+)
 
 # Ensure stdout/stderr handles UTF-8 on Windows consoles without charmap errors
 if hasattr(sys.stdout, "reconfigure"):
@@ -71,6 +77,122 @@ async def run_test_ingestion() -> None:
         raise
 
 
+async def run_test_risk() -> None:
+    """Evaluates deterministic landslide risk and historical precedent for all micro-zones."""
+    console.print(
+        "\n[bold cyan]Evaluating Deterministic Landslide Risk (SPEC-002)...[/bold cyan]"
+    )
+    ingest_service = DataIngestionService()
+    risk_service = RiskAssessmentService()
+
+    try:
+        metrics_dict = await ingest_service.fetch_and_process_all()
+    except Exception as e:
+        console.print(
+            "[yellow]Notice: Live fetch failed ("
+            f"{e}). Evaluating synthetic verification dataset.[/yellow]"
+        )
+        now = datetime.now()
+        metrics_dict = {
+
+            "wayanad": PrecipitationMetrics(
+                district_id="wayanad",
+                timestamp=now,
+                rainfall_1h=28.0,
+                rainfall_24h=210.0,
+                rainfall_48h=360.0,
+                rainfall_72h=410.0,
+                antecedent_index=162.0,
+            ),
+            "idukki": PrecipitationMetrics(
+                district_id="idukki",
+                timestamp=now,
+                rainfall_1h=12.0,
+                rainfall_24h=145.0,
+                rainfall_48h=190.0,
+                rainfall_72h=220.0,
+                antecedent_index=125.0,
+            ),
+            "kottayam": PrecipitationMetrics(
+                district_id="kottayam",
+                timestamp=now,
+                rainfall_1h=5.0,
+                rainfall_24h=65.0,
+                rainfall_48h=98.0,
+                rainfall_72h=115.0,
+                antecedent_index=72.0,
+            ),
+        }
+
+    assessments = risk_service.assess_all(metrics_dict)
+
+    table = Table(
+        title="Malabar Watch - Deterministic Risk Assessment (SPEC-002)",
+        border_style="magenta",
+        show_lines=True,
+    )
+    table.add_column("District / Micro-Zone", style="bold")
+    table.add_column("Risk Level", justify="center")
+    table.add_column("Transition State", justify="center")
+    table.add_column("Alert Required?", justify="center")
+    table.add_column("24h / 48h / API", justify="right")
+    table.add_column("Historical Precedent", style="cyan")
+    table.add_column("Triggered Audit Rules", style="dim")
+
+    level_styles = {
+        RiskLevel.LOW: "[green]🟢 LOW[/green]",
+        RiskLevel.MODERATE: "[yellow]🟡 MODERATE[/yellow]",
+        RiskLevel.HIGH: "[bold dark_orange]🟠 HIGH[/bold dark_orange]",
+        RiskLevel.SEVERE: "[bold red]🔴 SEVERE[/bold red]",
+    }
+
+    for district_id, assessment in assessments.items():
+        target = DEFAULT_TARGETS.get(district_id)
+        zone_label = f"{district_id.title()}\n[dim]({target.micro_zone if target else ''})[/dim]"
+
+        lvl_badge = level_styles.get(assessment.risk_level, assessment.risk_level.value)
+
+        alert_badge = (
+            "[bold red]YES (Dispatch)[/bold red]"
+            if assessment.requires_alert
+            else "[dim green]NO (Suppressed)[/dim green]"
+        )
+
+        metrics_summary = (
+            f"24h: {assessment.rainfall_24h:.1f}mm\n"
+            f"48h: {assessment.rainfall_48h:.1f}mm\n"
+            f"API: {assessment.antecedent_index:.1f}"
+        )
+
+        hist_summary = (
+            f"[bold]{assessment.historical_event.event_id}[/bold]\n"
+            f"{assessment.historical_event.location} ({assessment.historical_event.date})"
+            if assessment.historical_event
+            else "[dim]None[/dim]"
+        )
+
+        if assessment.triggered_rules:
+            rules_summary = "\n".join(f"• {r}" for r in assessment.triggered_rules)
+        else:
+            rules_summary = "[dim]Normal Baseline[/dim]"
+
+        table.add_row(
+            zone_label,
+            lvl_badge,
+            assessment.escalation_state.value,
+            alert_badge,
+            metrics_summary,
+            hist_summary,
+            rules_summary,
+        )
+
+    console.print(table)
+    console.print(
+        "[bold green]✓ Risk scoring complete. Assessments saved to database "
+        f"({settings.DATABASE_URL})[/bold green]\n"
+    )
+
+
 def main() -> int:
     """CLI Entry point for Malabar Watch agent."""
     parser = argparse.ArgumentParser(
@@ -81,11 +203,16 @@ def main() -> int:
         action="store_true",
         help="Poll live Open-Meteo weather data for Kerala districts and display metrics",
     )
-    # Also support positional argument "test-ingest"
+    parser.add_argument(
+        "--test-risk",
+        action="store_true",
+        help="Run deterministic risk scoring and historical grounding across all micro-zones",
+    )
+    # Also support positional argument "test-ingest" or "test-risk"
     parser.add_argument(
         "command",
         nargs="?",
-        choices=["test-ingest"],
+        choices=["test-ingest", "test-risk"],
         help="Optional sub-command to execute",
     )
 
@@ -99,6 +226,10 @@ def main() -> int:
         asyncio.run(run_test_ingestion())
         return 0
 
+    if args.test_risk or args.command == "test-risk":
+        asyncio.run(run_test_risk())
+        return 0
+
     # Default quick demonstration assessment
     sample = evaluate_risk("Wayanad", 165.0, 110.0)
     console.print(
@@ -106,8 +237,10 @@ def main() -> int:
         f"Risk Level: [bold red]{sample.risk_level.value}[/bold red]"
     )
     console.print("\n[dim]Run 'malabar-watch --test-ingest' to test live Open-Meteo polling.[/dim]")
+    console.print("[dim]Run 'malabar-watch --test-risk' to test deterministic risk engine.[/dim]")
     return 0
 
 
 if __name__ == "__main__":
     sys.exit(main())
+

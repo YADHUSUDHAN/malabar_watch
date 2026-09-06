@@ -1,43 +1,69 @@
-"""Risk engine module for rainfall and Antecedent Precipitation Index (API) evaluation."""
+"""Risk engine module for deterministic landslide risk evaluation and historical grounding."""
 
-from enum import StrEnum
-from typing import NamedTuple
+from datetime import datetime
 
+from malabar_watch.risk_engine.evaluator import RiskEvaluator, evaluate_metrics
+from malabar_watch.risk_engine.historical import HistoricalContextStore
+from malabar_watch.risk_engine.models import (
+    EscalationState,
+    HistoricalEvent,
+    RiskAssessment,
+    RiskLevel,
+)
+from malabar_watch.risk_engine.service import RiskAssessmentService
 
-class RiskLevel(StrEnum):
-    """Multi-tier risk classification levels."""
-
-    LOW = "LOW"
-    MODERATE = "MODERATE"
-    HIGH = "HIGH"
-    SEVERE = "SEVERE"
-
-
-class AssessmentResult(NamedTuple):
-    """Data transfer object representing risk evaluation output."""
-
-    district: str
-    risk_level: RiskLevel
-    rainfall_24h_mm: float
-    antecedent_index: float
-    description: str
+# Backward compatibility alias
+AssessmentResult = RiskAssessment
 
 
-def evaluate_risk(district: str, rainfall_24h: float, api_index: float) -> AssessmentResult:
-    """Evaluates rainfall parameters against Kerala landslide threshold matrix."""
-    if rainfall_24h >= 204.4 or api_index >= 150.0:
-        level = RiskLevel.SEVERE
-    elif rainfall_24h >= 150.0 or api_index >= 100.0:
-        level = RiskLevel.HIGH
-    elif rainfall_24h >= 100.0 or api_index >= 60.0:
-        level = RiskLevel.MODERATE
-    else:
-        level = RiskLevel.LOW
+def evaluate_risk(
+    district: str,
+    rainfall_24h: float,
+    api_index: float,
+    rainfall_48h: float = 0.0,
+    rainfall_1h: float = 0.0,
+    rainfall_72h: float = 0.0,
+    assessed_at: datetime | None = None,
+) -> RiskAssessment:
+    """Convenience evaluation function evaluating raw metrics against calibrated matrix.
 
-    return AssessmentResult(
-        district=district,
-        risk_level=level,
-        rainfall_24h_mm=rainfall_24h,
+    Maintains backward compatibility with legacy calls while returning full RiskAssessment.
+    """
+    timestamp = assessed_at or datetime.now()
+    level, rules = RiskEvaluator.evaluate_values(
+        rainfall_24h=rainfall_24h,
+        rainfall_48h=rainfall_48h,
         antecedent_index=api_index,
-        description=f"Risk assessment for {district}: {level.value}",
     )
+
+    store = HistoricalContextStore()
+    precedent = store.find_precedent(district, level, rainfall_24h)
+
+    return RiskAssessment(
+        district=district,
+        assessed_at=timestamp,
+        risk_level=level,
+        escalation_state=EscalationState.FIRST_ASSESSMENT,
+        rainfall_1h=rainfall_1h,
+        rainfall_24h=rainfall_24h,
+        rainfall_48h=rainfall_48h,
+        rainfall_72h=rainfall_72h,
+        antecedent_index=api_index,
+        triggered_rules=rules,
+        historical_event=precedent,
+        requires_alert=level in (RiskLevel.MODERATE, RiskLevel.HIGH, RiskLevel.SEVERE),
+    )
+
+
+__all__ = [
+    "AssessmentResult",
+    "EscalationState",
+    "HistoricalContextStore",
+    "HistoricalEvent",
+    "RiskAssessment",
+    "RiskAssessmentService",
+    "RiskEvaluator",
+    "RiskLevel",
+    "evaluate_metrics",
+    "evaluate_risk",
+]
