@@ -1,6 +1,6 @@
 # External Services & Infrastructure Setup Guide
 
-This document provides complete, step-by-step instructions for provisioning all required external services, obtaining API credentials, creating Telegram alert bots, configuring zero-cost cloud hosting on Google Cloud Platform (GCP) Compute Engine Always Free Tier, and setting up GitHub Actions secrets for **Malabar Watch (മലബാർ വാച്ച്)**.
+This document provides complete, step-by-step instructions for provisioning all required external services, obtaining API credentials, creating Telegram alert bots, configuring zero-cost cloud hosting on Amazon Web Services (AWS) EC2 Free Tier with AWS Systems Manager (SSM), and setting up GitHub Actions secrets for **Malabar Watch (മലബാർ വാച്ച്)**.
 
 ---
 
@@ -13,7 +13,7 @@ This document provides complete, step-by-step instructions for provisioning all 
 | **Telegram BotFather** | Outbound Alert Dispatcher | `TELEGRAM_BOT_TOKEN` | Free |
 | **Telegram Channel / User** | Target Alert Recipient | `TELEGRAM_CHAT_ID` | Free |
 | **Open-Meteo API** | Weather & Rainfall Data Source | *None (No Key Needed)* | Free / Open Access |
-| **GCP Compute Engine** | Always Free `e2-micro` Linux VM | Host IP + SSH Private Key | ₹0/month (Always Free) |
+| **AWS EC2 Free Tier** | Cloud VM (`t2.micro`/`t3.micro` in `ap-south-1`) | AWS Systems Manager (SSM) | ₹0/month (Free Tier) |
 | **GitHub Repository** | Secrets & CI/CD Pipeline | Secrets configured in GitHub | Free |
 
 ---
@@ -109,72 +109,57 @@ GET https://api.open-meteo.com/v1/forecast?latitude=11.55&longitude=76.04&hourly
 
 ---
 
-## 5. ☁️ Google Cloud Platform (GCP) Compute Engine Always Free Setup
+## 5. ☁️ Amazon Web Services (AWS) Free Tier & Systems Manager (SSM) Setup
 
-Google Cloud Console provides a **100% Always Free Tier** featuring 1 Compute Engine `e2-micro` Virtual Machine instance, 30 GB standard persistent disk, and 1 GB monthly outbound egress at ₹0/month forever.
+> 💡 **Notice: Local-First Workflow**  
+> Complete all local development, testing (`uv run pytest`), and verification before provisioning AWS cloud infrastructure.
 
-### Step 5.1: Create GCP Billing Account & Project
-1. Visit **[Google Cloud Console](https://console.cloud.google.com/)**.
-2. Sign in with your Google account and create a new project named `malabar-watch-prod`.
-3. Enable billing (requires credit card for identity verification; no charges will occur within Always Free limits).
+AWS provides **750 hours/month** of Linux `t2.micro` or `t3.micro` under the 12-Month Free Tier:
 
-### Step 5.2: Generate SSH Keypair (Local Terminal)
-Run the following command on your local machine to generate an SSH keypair:
+### Step 5.1: Create IAM Role for Keyless AWS SSM Access
+1. Open the **[AWS IAM Console](https://console.aws.amazon.com/iam/)**.
+2. Navigate to **Roles** ➔ **Create role**.
+3. Select **AWS service** ➔ Use case: **EC2**.
+4. Attach permission policy: `AmazonSSMManagedInstanceCore`.
+5. Name the role: `malabar-watch-ssm-role` and click **Create role**.
 
-**Linux / macOS (Bash/Zsh):**
-```bash
-mkdir -p ~/.ssh
-ssh-keygen -t ed25519 -C "malabar-watch-gcp" -f ~/.ssh/id_ed25519_malabar_gcp
-```
+### Step 5.2: Create Zero-Inbound Security Group
+1. Open **EC2 Console** ➔ **Security Groups** ➔ **Create security group**.
+2. Name: `malabar-watch-zero-inbound`.
+3. Inbound rules: **Leave completely empty** (Deny all inbound traffic from `0.0.0.0/0`).
+4. Outbound rules: **All traffic** (allowing outbound HTTPS 443 for Open-Meteo, Telegram, and LLM APIs).
 
-**Windows (PowerShell):**
-```powershell
-New-Item -ItemType Directory -Path "$env:USERPROFILE\.ssh" -Force
-ssh-keygen -t ed25519 -C "malabar-watch-gcp" -f "$env:USERPROFILE\.ssh\id_ed25519_malabar_gcp"
-```
+### Step 5.3: Launch AWS EC2 Free Tier Instance
+1. In EC2 Console, choose region **Asia Pacific (Mumbai) `ap-south-1`**.
+2. Click **Launch Instance**:
+   - **Name**: `malabar-watch-node-01`
+   - **AMI**: `Ubuntu Server 24.04 LTS (HVM), SSD Volume Type`
+   - **Instance Type**: `t2.micro` or `t3.micro` (Free Tier eligible)
+   - **Key pair**: *Proceed without a key pair* (keyless access via SSM)
+   - **Network settings**: Select the `malabar-watch-zero-inbound` Security Group.
+   - **Configure Storage**: `30 GiB` gp3 root volume.
+   - **Advanced Details**: In **IAM instance profile**, select `malabar-watch-ssm-role`.
+3. Click **Launch Instance**.
 
-This generates two files:
-- Private Key: `id_ed25519_malabar_gcp` (Keep confidential!)
-- Public Key: `id_ed25519_malabar_gcp.pub` (Upload to GCP)
-
-### Step 5.3: Provision Always Free `e2-micro` VM Instance
-1. Go to **Compute Engine** ➔ **VM Instances** ➔ **Create Instance**.
-2. **Name**: `malabar-watch-vm-01`.
-3. **Region**: Select an Always Free Region:
-   - `us-central1` (Iowa)
-   - `us-east1` (South Carolina)
-   - `us-west1` (Oregon)
-4. **Machine Family**: General-purpose ➔ Series `E2` ➔ Machine Type `e2-micro` (0.25–2 vCPU, 1 GB RAM).
-5. **Boot Disk**: Click **Change** ➔ Operating System: `Ubuntu` (or `Debian`) ➔ Boot Disk Type: **Standard persistent disk** (do NOT use *Balanced persistent disk*) ➔ Size: `30 GB`.
-6. **SSH Keys**: Expand **Advanced Options** ➔ **Security** ➔ **SSH Keys** ➔ Paste contents of `id_ed25519_malabar_gcp.pub`.
-7. Click **Create**. Note down the assigned **External Public IP**.
-
-> 💡 **Why does GCP Console show "Monthly estimate US$7.11"?**  
-> Google Cloud Console always displays the baseline list price before applying the **Always Free Tier discount**. As long as your instance is `e2-micro` in `us-central1`, `us-east1`, or `us-west1`, and uses **Standard persistent disk** (up to 30 GB), GCP automatically credits **$7.11/month (100% discount)** on your bill, resulting in **$0.00 actual cost**.
-
-### Step 5.4: Configure 2 GB Swap File on Ubuntu VM
-Since `e2-micro` has 1 GB RAM, configure a 2 GB Linux Swap file to prevent memory pressure during Python dependency installation:
-```bash
-ssh -i ~/.ssh/id_ed25519_malabar_gcp ubuntu@<YOUR_VM_PUBLIC_IP>
-
-# Inside VM:
-sudo fallocate -l 2G /swapfile
-sudo chmod 600 /swapfile
-sudo mkswap /swapfile
-sudo swapon /swapfile
-echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
-```
+### Step 5.4: Connect Keylessly via AWS SSM & Configure Swap
+1. Once the instance status is *Running*, select it and click **Connect** ➔ **Session Manager** ➔ **Connect**.
+2. Configure a 2 GB Linux Swap file:
+   ```bash
+   sudo fallocate -l 2G /swapfile
+   sudo chmod 600 /swapfile
+   sudo mkswap /swapfile
+   sudo swapon /swapfile
+   echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+   ```
 
 ---
 
 ## 6. 🔐 GitHub Secrets & Actions CI/CD Setup
 
-To automate testing, linting, and continuous deployment, store all sensitive production keys in your GitHub repository's encrypted secrets store.
-
-### Step-by-Step Guide:
+Store sensitive API keys in your GitHub repository's encrypted secrets store:
 1. Open your repository on GitHub.
 2. Go to **Settings** ➔ **Secrets and variables** ➔ **Actions**.
-3. Click **New repository secret** for each item below:
+3. Add the following secrets:
 
 | Secret Name | Value Description |
 | :--- | :--- |
@@ -182,8 +167,9 @@ To automate testing, linting, and continuous deployment, store all sensitive pro
 | `GROQ_API_KEY` | Groq API Key (`gsk_...`) |
 | `TELEGRAM_BOT_TOKEN` | Telegram Bot Token from BotFather |
 | `TELEGRAM_CHAT_ID` | Telegram Channel or Group Chat ID (`-100...`) |
-| `GCP_HOST` | GCP Compute Engine VM Public IP Address |
-| `GCP_SSH_KEY` | Contents of `~/.ssh/id_ed25519_malabar_gcp` (Private Key) |
+| `AWS_ROLE_ARN` | AWS IAM Role ARN configured for GitHub OIDC |
+| `AWS_REGION` | AWS Region (e.g., `ap-south-1`) |
+| `AWS_INSTANCE_ID` | Target EC2 Instance ID (`i-...`) |
 
 ---
 

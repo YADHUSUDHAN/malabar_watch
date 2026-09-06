@@ -13,11 +13,11 @@ This document provides a comprehensive Architectural Decision Record (ADR) detai
 | **Primary LLM** | Google Gemini (`gemini-2.5-flash`) | OpenAI GPT-4o-mini, Anthropic Claude 3.5 Haiku, DeepSeek V3 | Generous free tier (15 RPM / 1M TPM), superior native Malayalam generation. |
 | **Fallback LLM** | Groq API (`llama-3.3-70b-versatile`) | Together AI, Ollama Local, Cerbras AI | Ultra-fast inferencing (<500ms), generous free tier (30 RPM / 14.4k RPD). |
 | **Alert Delivery Channel** | Telegram Bot API | WhatsApp Business API, SMS (Twilio), Mobile App (Flutter), Web Dashboard | Outbound-only long polling (zero open ports), 100% free unlimited push alerts. |
-| **Cloud Compute Host** | GCP Compute Engine Always Free (`e2-micro`) | Oracle Cloud Free Tier, AWS EC2 t2.micro, Azure B1s, Render/Fly.io | Genuinely free forever: 1 VM (0.25-2 vCPU, 1GB RAM + 2GB Swap, 30GB disk), reliable global availability & seamless account setup. |
+| **Cloud Compute Host** | AWS EC2 Free Tier (`t2.micro` / `t3.micro`) | GCP Compute Engine, Oracle Cloud Free Tier, Azure B1s, Render/Fly.io | Low network latency (`ap-south-1` Mumbai), 750 free hours/mo, seamless AWS Systems Manager integration. |
 | **Database Engine** | SQLite 3 (WAL Mode) | PostgreSQL / MySQL, MongoDB, Redis, Cloud DynamoDB | Zero ops, zero RAM overhead, embedded local file storage with high concurrency. |
-| **Infrastructure as Code** | Terraform | AWS CloudFormation, Pulumi, Manual Cloud Console | Vendor-neutral industry standard, declarative state management. |
-| **Security Access Model** | GCP VPC Firewall (Zero Inbound Inbound Ports) | Open Public SSH (Port 22), OpenVPN Server, Tailscale / Cloudflare Tunnel | True zero public exposed inbound application ports; outbound long-polling only. |
-| **Deployment & CI/CD** | GitHub Actions + OIDC | Jenkins, GitLab CI, Manual SSH deployment | Free for public repos, keyless OIDC authentication eliminates long-lived credentials. |
+| **Infrastructure as Code** | Terraform (`hashicorp/aws`) | AWS CloudFormation, Pulumi, Manual Cloud Console | Vendor-neutral industry standard, declarative state management. |
+| **Security Access Model** | AWS Security Groups + SSM Session Manager | Open Public SSH (Port 22), OpenVPN Server, Tailscale / Cloudflare Tunnel | True zero public exposed inbound application ports; keyless IAM-authenticated administration. |
+| **Deployment & CI/CD** | GitHub Actions + AWS OIDC | Jenkins, GitLab CI, Manual SSH deployment | Free for public repos, keyless OIDC authentication eliminates long-lived credentials. |
 
 ---
 
@@ -101,18 +101,19 @@ This document provides a comprehensive Architectural Decision Record (ADR) detai
 
 ---
 
-### 2.6 Cloud Compute Host: GCP Compute Engine Always Free vs. Alternatives
+### 2.6 Cloud Compute Host: AWS EC2 Free Tier vs. Alternatives
 
-- **SELECTED:** **Google Cloud Platform (GCP) Compute Engine Always Free (`e2-micro`)**
+- **SELECTED:** **Amazon Web Services (AWS) EC2 (`t2.micro` / `t3.micro`) & Local-First Verification Workflow**
   - *Why Chosen:*
-    1. **Permanent Free Tier:** 1 `e2-micro` VM (0.25–2 vCPU, 1 GB RAM, 30 GB Persistent Disk) free forever in `us-central1`, `us-east1`, or `us-west1`.
-    2. **High Accessibility & Fast Provisioning:** Standard GCP account setup without card verification hurdles or capacity shortages often encountered on Oracle Cloud.
-    3. **Optimized Resource Footprint:** Paired with 2 GB Linux Swap space on Ubuntu 24.04 LTS, easily handles Python 3.12, SQLite WAL mode, and Telegram long polling with zero cost.
+    1. **Local-First Verification Strategy:** The complete system is verified end-to-end locally before any cloud infrastructure is provisioned, minimizing unexpected cloud compute issues or stray billing.
+    2. **Low-Latency Indian Infrastructure:** AWS `ap-south-1` (Mumbai) offers sub-30ms round-trip latency to Kerala ISP networks and Telegram datacenters.
+    3. **AWS Systems Manager (SSM) Integration:** Clean, keyless terminal access without exposing SSH port 22 or managing static SSH keys.
+    4. **Generous Free Tier & Predictable Transition:** 750 free hours/month on EC2 Free Tier; seamless migration to low-cost AWS Lightsail ($3.50/month) or spot instances if needed.
 - **REJECTED ALTERNATIVES:**
   - ❌ **Oracle Cloud Free Tier (ARM Ampere A1):**
-    - *Reason for Rejection:* High signup verification failure rates, card rejection issues, and frequent out-of-capacity errors for ARM shapes in many global regions.
-  - ❌ **AWS Free Tier (t2.micro / t3.micro):**
-    - *Reason for Rejection:* Free tier expires after 12 months (not permanent), provides only 1 vCPU and 1 GB RAM, and incurs charges for elastic IPs if stopped.
+    - *Reason for Rejection:* High signup verification failure rates, aggressive card rejections, and frequent out-of-capacity errors for ARM shapes in India regions.
+  - ❌ **GCP Compute Engine Always Free (e2-micro):**
+    - *Reason for Rejection:* Always Free tier is restricted to US regions (`us-central1`, `us-east1`, `us-west1`), resulting in higher latency (~220ms) from Kerala compared to AWS Mumbai (`ap-south-1`).
   - ❌ **Serverless PaaS (Render / Fly.io / Vercel):**
     - *Reason for Rejection:* Free tiers put background workers to sleep after inactivity, breaking hourly cron schedules or requiring inbound pingers (which expose ports).
 
@@ -133,14 +134,16 @@ This document provides a comprehensive Architectural Decision Record (ADR) detai
 
 ---
 
-### 2.8 Security Model: GCP VPC Firewall & Keyless Access vs. Alternatives
+### 2.8 Security Model: AWS Security Groups & SSM Session Manager vs. Alternatives
 
-- **SELECTED:** **GCP VPC Firewall & Keyless Deployment (Zero Inbound App Ports)**
+- **SELECTED:** **AWS Security Groups & AWS SSM Session Manager (Zero Inbound App Ports)**
   - *Why Chosen:*
-    1. **Zero Public Inbound Exposure:** VPC Firewall rules block all incoming traffic to application ports (`DENY ALL`).
-    2. **Outbound-Only Communication:** Telegram long-polling and Open-Meteo polling originate strictly outbound over HTTPS.
+    1. **Zero Public Inbound Exposure:** Security Groups block 100% of incoming traffic from the internet (`0.0.0.0/0`).
+    2. **Keyless Session Manager:** Terminal access and code deployment utilize AWS SSM Session Manager backed by IAM policies, eliminating SSH port 22 and leaked private keys.
+    3. **Outbound-Only Communication:** Telegram long-polling and Open-Meteo polling originate strictly outbound over HTTPS.
 - **REJECTED ALTERNATIVES:**
   - ❌ **Public Webhook Servers (Port 80/443 Open to 0.0.0.0/0):**
     - *Reason for Rejection:* Exposes host to web vulnerabilities, requires managing SSL certificates (Certbot), and opens inbound attack vectors.
   - ❌ **Self-Hosted VPN (OpenVPN / WireGuard):**
     - *Reason for Rejection:* Requires opening a UDP/TCP inbound port on the VM, increasing attack surface and maintenance burden.
+

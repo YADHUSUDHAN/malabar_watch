@@ -1,21 +1,29 @@
 """Data ingestion package for fetching and parsing Open-Meteo rainfall metrics."""
 
-from typing import Any
+from malabar_watch.ingestion.client import OpenMeteoClient
+from malabar_watch.ingestion.metrics import (
+    calculate_antecedent_precipitation_index,
+    calculate_rolling_total,
+    compute_derived_metrics,
+    sanitize_precipitation_series,
+)
+from malabar_watch.ingestion.models import (
+    DEFAULT_TARGETS,
+    DistrictTarget,
+    HourlyPrecipitationData,
+    PrecipitationMetrics,
+)
+from malabar_watch.ingestion.service import DataIngestionService
 
-
-class OpenMeteoClient:
-    """Client for retrieving weather data from Open-Meteo API."""
-
-    def __init__(self, base_url: str = "https://api.open-meteo.com/v1/forecast") -> None:
-        self.base_url = base_url
-
-    async def fetch_hourly_precipitation(
-        self, latitude: float, longitude: float, past_days: int = 3
-    ) -> dict[str, Any]:
-        """Placeholder method for fetching hourly precipitation metrics."""
-        return {
-            "latitude": latitude,
-            "longitude": longitude,
-            "past_days": past_days,
-            "status": "not_implemented",
-        }
+__all__ = [
+    "DEFAULT_TARGETS",
+    "DataIngestionService",
+    "DistrictTarget",
+    "HourlyPrecipitationData",
+    "OpenMeteoClient",
+    "PrecipitationMetrics",
+    "calculate_antecedent_precipitation_index",
+    "calculate_rolling_total",
+    "compute_derived_metrics",
+    "sanitize_precipitation_series",
+]

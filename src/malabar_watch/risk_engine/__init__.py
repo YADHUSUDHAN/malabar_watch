@@ -23,9 +23,7 @@ class AssessmentResult(NamedTuple):
     description: str
 
 
-def evaluate_risk(
-    district: str, rainfall_24h: float, api_index: float
-) -> AssessmentResult:
+def evaluate_risk(district: str, rainfall_24h: float, api_index: float) -> AssessmentResult:
     """Evaluates rainfall parameters against Kerala landslide threshold matrix."""
     if rainfall_24h >= 204.4 or api_index >= 150.0:
         level = RiskLevel.SEVERE

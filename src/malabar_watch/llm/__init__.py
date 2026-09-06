@@ -12,9 +12,7 @@ class DualLLMGateway:
         self.gemini_key = gemini_key
         self.groq_key = groq_key
 
-    async def generate_bilingual_advisory(
-        self, prompt: str
-    ) -> dict[str, str]:
+    async def generate_bilingual_advisory(self, prompt: str) -> dict[str, str]:
         """Placeholder method for bilingual (English + Malayalam) generation."""
         return {
             "english": "Bilingual advisory generator initialized.",

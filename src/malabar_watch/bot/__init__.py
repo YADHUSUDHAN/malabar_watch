@@ -11,4 +11,3 @@ class TelegramAlertBot:
     async def send_alert(self, message: str) -> bool:
         """Placeholder method for dispatching formatted alerts to Telegram."""
         return True
-
