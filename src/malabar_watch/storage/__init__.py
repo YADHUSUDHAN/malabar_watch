@@ -5,6 +5,8 @@ import sqlite3
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
+from malabar_watch.config import now_ist
+
 if TYPE_CHECKING:
     from malabar_watch.ingestion.models import PrecipitationMetrics
     from malabar_watch.risk_engine.models import RiskAssessment
@@ -186,7 +188,7 @@ class DatabaseManager:
                 should_close = True
 
         try:
-            now_iso = datetime.now().isoformat()
+            now_iso = now_ist().isoformat()
             cursor = conn.execute(
                 """
                 SELECT * FROM rainfall_observations
@@ -576,7 +578,7 @@ class DatabaseManager:
                 should_close = True
 
         try:
-            now_iso = datetime.now().isoformat()
+            now_iso = now_ist().isoformat()
             cursor = conn.execute(
                 """
                 SELECT district, timestamp, precipitation_mm, rainfall_24h,

@@ -15,7 +15,7 @@ from malabar_watch.bot.formatter import (
     get_micro_zone_label,
 )
 from malabar_watch.bot.keyboards import get_action_keyboard, get_district_keyboard
-from malabar_watch.config import settings
+from malabar_watch.config import now_ist, settings
 from malabar_watch.ingestion import DEFAULT_TARGETS, DataIngestionService
 from malabar_watch.ingestion.models import PrecipitationMetrics
 from malabar_watch.llm import DualLLMGateway
@@ -79,7 +79,7 @@ async def fetch_or_get_status(
 
     if obs:
         ts_raw = obs.get("timestamp")
-        ts = datetime.fromisoformat(str(ts_raw)) if ts_raw else datetime.now()
+        ts = datetime.fromisoformat(str(ts_raw)) if ts_raw else now_ist()
         metrics = PrecipitationMetrics(
             district_id=norm_district,
             rainfall_1h=float(obs.get("precipitation_mm", 0.0)),

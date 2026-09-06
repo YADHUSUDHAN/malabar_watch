@@ -4,6 +4,7 @@ import math
 from collections.abc import Sequence
 from datetime import datetime
 
+from malabar_watch.config import now_ist
 from malabar_watch.ingestion.models import HourlyPrecipitationData, PrecipitationMetrics
 
 
@@ -84,21 +85,18 @@ def compute_derived_metrics(
     alpha: float = 0.85,
     reference_time: datetime | None = None,
 ) -> PrecipitationMetrics:
-    """Transforms raw Open-Meteo time-series data into structured multi-window metrics.
-
-    Only observations up to `reference_time` (default: current local time) are considered,
-    preventing future forecast hours returned by Open-Meteo from skewing observed totals.
+    """Computes rolling totals and antecedent precipitation index from raw hourly data.
 
     Args:
-        district_id: Identifier of the district (e.g. 'wayanad').
-        hourly_data: Raw parsed timestamps and precipitation arrays.
+        district_id: District identifier.
+        hourly_data: Raw precipitation timeseries from Open-Meteo.
         alpha: Decay factor for Antecedent Precipitation Index.
-        reference_time: Optional cutoff timestamp (defaults to current local time).
+        reference_time: Optional cutoff timestamp (defaults to current Indian Standard Time).
 
     Returns:
         Structured PrecipitationMetrics ready for persistence and risk assessment.
     """
-    cutoff = reference_time or datetime.now()
+    cutoff = reference_time or now_ist()
 
     # Filter out future forecast timestamps if present
     if hourly_data.timestamps and any(t > cutoff for t in hourly_data.timestamps):

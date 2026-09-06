@@ -117,13 +117,12 @@ class DualLLMGateway:
 
     async def generate_bilingual_advisory(self, prompt: str) -> dict[str, str]:
         """Backward-compatibility interface for legacy callers."""
-        from datetime import datetime
-
+        from malabar_watch.config import now_ist
         from malabar_watch.risk_engine.models import EscalationState, RiskAssessment, RiskLevel
 
         synthetic_assessment = RiskAssessment(
             district="wayanad",
-            assessed_at=datetime.now(),
+            assessed_at=now_ist(),
             risk_level=RiskLevel.HIGH,
             escalation_state=EscalationState.FIRST_ASSESSMENT,
             rainfall_1h=15.0,

@@ -1,7 +1,16 @@
-"""Configuration module for Malabar Watch using Pydantic Settings."""
+from datetime import datetime, timedelta, timezone
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+KERALA_TZ = timezone(timedelta(hours=5, minutes=30))
+
+
+def now_ist() -> datetime:
+    """Returns current datetime in Indian Standard Time (IST, UTC+5:30) as a naive datetime,
+    strictly matching Open-Meteo's timezone=Asia/Kolkata timestamps across all OS platforms.
+    """
+    return datetime.now(KERALA_TZ).replace(tzinfo=None)
 
 
 class Settings(BaseSettings):

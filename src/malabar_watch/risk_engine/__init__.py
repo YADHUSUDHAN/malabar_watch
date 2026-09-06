@@ -2,6 +2,7 @@
 
 from datetime import datetime
 
+from malabar_watch.config import now_ist
 from malabar_watch.risk_engine.evaluator import RiskEvaluator, evaluate_metrics
 from malabar_watch.risk_engine.historical import HistoricalContextStore
 from malabar_watch.risk_engine.models import (
@@ -29,7 +30,7 @@ def evaluate_risk(
 
     Maintains backward compatibility with legacy calls while returning full RiskAssessment.
     """
-    timestamp = assessed_at or datetime.now()
+    timestamp = assessed_at or now_ist()
     level, rules = RiskEvaluator.evaluate_values(
         rainfall_24h=rainfall_24h,
         rainfall_48h=rainfall_48h,
