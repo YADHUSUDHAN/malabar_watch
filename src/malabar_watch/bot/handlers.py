@@ -70,6 +70,10 @@ async def disclaimer_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     )
 
 
+# Cache for synthesized advisories: (district, risk_level, hour_str) -> BilingualAdvisory
+_ADVISORY_CACHE: dict[tuple[str, str, str], Any] = {}
+
+
 async def fetch_or_get_status(
     district_id: str, db: DatabaseManager
 ) -> tuple[PrecipitationMetrics, Any, Any]:
@@ -103,11 +107,20 @@ async def fetch_or_get_status(
     risk_service = RiskAssessmentService(db_manager=db)
     assessment = risk_service.assess_metrics(metrics)
 
-    # If risk is elevated, synthesize advisory if not already present
+    # If risk is elevated, synthesize advisory if not already present in hourly cache
     advisory = None
     if assessment.requires_alert:
-        gateway = DualLLMGateway()
-        advisory = await gateway.generate_advisory(assessment)
+        hour_key = (
+            norm_district,
+            assessment.risk_level.value,
+            metrics.timestamp.strftime("%Y-%m-%d %H"),
+        )
+        if hour_key in _ADVISORY_CACHE:
+            advisory = _ADVISORY_CACHE[hour_key]
+        else:
+            gateway = DualLLMGateway()
+            advisory = await gateway.generate_advisory(assessment)
+            _ADVISORY_CACHE[hour_key] = advisory
 
     return metrics, assessment, advisory
 
