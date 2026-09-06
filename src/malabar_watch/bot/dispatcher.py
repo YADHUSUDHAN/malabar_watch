@@ -95,12 +95,22 @@ class AlertDispatcher:
                     await asyncio.sleep(0.05)
                 except Forbidden:
                     # User blocked the bot - deactivate in database
-                    logger.warning("Bot was blocked by chat_id=%s. Deactivating subscription.", chat_id)
+                    logger.warning(
+                        "Bot was blocked by chat_id=%s. Deactivating subscription.", chat_id
+                    )
                     self.db.remove_subscriber(chat_id)
                     failed_count += 1
                 except RetryAfter as e:
-                    logger.warning("Telegram flood limit encountered. Sleeping for %s seconds.", e.retry_after)
-                    await asyncio.sleep(float(e.retry_after))
+                    sleep_sec = (
+                        e.retry_after.total_seconds()
+                        if hasattr(e.retry_after, "total_seconds")
+                        else float(e.retry_after)
+                    )
+                    logger.warning(
+                        "Telegram flood limit encountered. Sleeping for %.1f seconds.",
+                        sleep_sec,
+                    )
+                    await asyncio.sleep(sleep_sec)
                     try:
                         await bot.send_message(
                             chat_id=chat_id,
@@ -110,7 +120,9 @@ class AlertDispatcher:
                         )
                         delivered_count += 1
                     except Exception as retry_err:
-                        logger.error("Failed retry dispatch to chat_id=%s: %s", chat_id, retry_err)
+                        logger.error(
+                            "Failed retry dispatch to chat_id=%s: %s", chat_id, retry_err
+                        )
                         failed_count += 1
                 except TelegramError as e:
                     logger.error("Telegram error sending alert to chat_id=%s: %s", chat_id, e)

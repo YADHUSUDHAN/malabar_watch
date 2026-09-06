@@ -1,6 +1,7 @@
 """Unit tests for subscriber and alert log storage operations in DatabaseManager."""
 
 import pytest
+
 from malabar_watch.storage import DatabaseManager
 
 

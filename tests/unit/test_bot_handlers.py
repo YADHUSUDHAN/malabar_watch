@@ -4,6 +4,7 @@ from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from telegram import Message
 
 from malabar_watch.bot.handlers import (
     callback_query_handler,
@@ -140,6 +141,7 @@ async def test_callback_query_handler(mock_update, mock_context, test_db):
     query = MagicMock()
     query.data = "sub:idukki"
     query.answer = AsyncMock()
+    query.message = MagicMock(spec=Message)
     query.message.reply_text = AsyncMock()
     mock_update.callback_query = query
 

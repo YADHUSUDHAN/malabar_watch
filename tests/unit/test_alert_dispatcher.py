@@ -4,7 +4,7 @@ from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from telegram.error import Forbidden, RetryAfter
+from telegram.error import Forbidden
 
 from malabar_watch.bot.dispatcher import AlertDispatcher
 from malabar_watch.llm.models import BilingualAdvisory, LLMProviderType

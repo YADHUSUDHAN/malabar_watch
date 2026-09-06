@@ -233,5 +233,6 @@ def format_disclaimer_html() -> str:
         "• <b>Idukki District Control Room:</b> 04862-233111\n"
         "• <b>Kottayam District Control Room:</b> 0481-2562201\n"
         "───────────────────────────\n"
-        "<i>Always evacuate when directed by local revenue, police, and disaster management authorities.</i>"
+        "<i>Always evacuate when directed by local revenue, police, "
+        "and disaster management authorities.</i>"
     )

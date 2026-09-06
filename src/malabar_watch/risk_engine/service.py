@@ -1,5 +1,4 @@
-"""Orchestration service coordinating deterministic risk scoring, transitions, and history."""
-
+import logging
 from collections.abc import Mapping
 from datetime import datetime
 from typing import TYPE_CHECKING
@@ -12,6 +11,8 @@ from malabar_watch.risk_engine.models import (
     RiskLevel,
 )
 from malabar_watch.storage import DatabaseManager
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from malabar_watch.ingestion.models import PrecipitationMetrics
@@ -178,7 +179,23 @@ class RiskAssessmentService:
         )
 
         if persist:
-            self.db.save_assessment(assessment)
+            row_id = self.db.save_assessment(assessment)
+            logger.info(
+                "Risk assessed for '%s': level=%s, state=%s, requires_alert=%s (row_id=%d)",
+                assessment.district,
+                assessment.risk_level.value,
+                assessment.escalation_state.value,
+                assessment.requires_alert,
+                row_id,
+            )
+        else:
+            logger.info(
+                "Risk assessed for '%s': level=%s, state=%s, requires_alert=%s (unpersisted)",
+                assessment.district,
+                assessment.risk_level.value,
+                assessment.escalation_state.value,
+                assessment.requires_alert,
+            )
 
         return assessment
 

@@ -1,5 +1,4 @@
-"""High-level orchestration service for data ingestion and metric storage."""
-
+import logging
 from collections.abc import Mapping
 
 from malabar_watch.config import settings
@@ -11,6 +10,8 @@ from malabar_watch.ingestion.models import (
     PrecipitationMetrics,
 )
 from malabar_watch.storage import DatabaseManager
+
+logger = logging.getLogger(__name__)
 
 
 class DataIngestionService:
@@ -37,6 +38,13 @@ class DataIngestionService:
         Returns:
             PrecipitationMetrics containing all computed multi-window totals.
         """
+        logger.info(
+            "Polling weather data for target '%s' (%s, %.4f, %.4f)",
+            target.district_id,
+            target.name,
+            target.latitude,
+            target.longitude,
+        )
         hourly_data = await self.client.fetch_hourly_precipitation(
             latitude=target.latitude,
             longitude=target.longitude,
@@ -50,7 +58,15 @@ class DataIngestionService:
             alpha=settings.ANTECEDENT_PRECIPITATION_INDEX_ALPHA,
         )
 
-        self.db.save_observation(metrics)
+        row_id = self.db.save_observation(metrics)
+        logger.info(
+            "Saved observation for '%s' (row_id=%d): 1h=%.1fmm, 24h=%.1fmm, API=%.1f",
+            target.district_id,
+            row_id,
+            metrics.rainfall_1h,
+            metrics.rainfall_24h,
+            metrics.antecedent_index,
+        )
         return metrics
 
     async def fetch_and_process_all(self) -> dict[str, PrecipitationMetrics]:
@@ -59,7 +75,9 @@ class DataIngestionService:
         Returns:
             Dictionary mapping district_id to calculated PrecipitationMetrics.
         """
+        logger.info("Initiating weather ingestion across %d targets", len(self.targets))
         results: dict[str, PrecipitationMetrics] = {}
         for district_id, target in self.targets.items():
             results[district_id] = await self.fetch_and_process_district(target)
+        logger.info("Successfully ingested weather data for all %d targets", len(results))
         return results

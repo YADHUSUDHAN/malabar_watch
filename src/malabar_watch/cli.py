@@ -256,10 +256,12 @@ async def run_test_llm() -> None:
 
 async def run_test_bot() -> None:
     """Simulates Telegram bot HTML formatting and alert broadcast dispatch."""
-    from malabar_watch.bot import AlertDispatcher, format_alert_html, format_welcome_html
+    from malabar_watch.bot import AlertDispatcher, format_alert_html
     from malabar_watch.storage import DatabaseManager
 
-    console.print("\n[bold cyan]Simulating Telegram Bot Dispatch & Formatting (SPEC-004)...[/bold cyan]")
+    console.print(
+        "\n[bold cyan]Simulating Telegram Bot Dispatch & Formatting (SPEC-004)...[/bold cyan]"
+    )
     db_path = settings.DATABASE_URL.replace("sqlite:///", "")
     db = DatabaseManager(db_path=db_path)
     db.initialize_schema()
@@ -304,9 +306,12 @@ async def run_test_bot() -> None:
         dry_run=True,
     )
 
+    deliv = stats["delivered"]
+    fail = stats["failed"]
+    tot = stats["total"]
     console.print(
         f"[bold green]✓ Simulated Dispatch Complete:[/bold green] "
-        f"Delivered: {stats['delivered']} | Failed: {stats['failed']} | Total Target Subs: {stats['total']}\n"
+        f"Delivered: {deliv} | Failed: {fail} | Total Target Subs: {tot}\n"
     )
 
 
@@ -322,7 +327,9 @@ def run_bot() -> None:
         sys.exit(1)
 
     service = TelegramBotService()
-    console.print("[bold green]Starting Malabar Watch Telegram bot daemon (Long Polling)...[/bold green]")
+    console.print(
+        "[bold green]Starting Malabar Watch Telegram bot daemon (Long Polling)...[/bold green]"
+    )
     service.run_polling()
 
 
@@ -330,7 +337,9 @@ async def run_pipeline(dry_run: bool = True) -> None:
     """Executes a complete single-pass cycle of the autonomous pipeline."""
     from malabar_watch.pipeline import PipelineRunner
 
-    console.print("\n[bold cyan]Executing Full Autonomous Pipeline Cycle (SPEC 001-004)...[/bold cyan]")
+    console.print(
+        "\n[bold cyan]Executing Full Autonomous Pipeline Cycle (SPEC 001-004)...[/bold cyan]"
+    )
     runner = PipelineRunner()
     results = await runner.run_cycle(dry_run=dry_run, force_alert=True)
 
@@ -356,6 +365,10 @@ async def run_pipeline(dry_run: bool = True) -> None:
 
 def main() -> int:
     """CLI Entry point for Malabar Watch agent."""
+    from malabar_watch.logging import setup_logging
+
+    setup_logging()
+
     parser = argparse.ArgumentParser(
         description="Malabar Watch - AI Rainfall & Landslide Early Warning Agent"
     )
@@ -437,7 +450,7 @@ def main() -> int:
     console.print("  [dim]• malabar-watch --test-ingest   (Test Open-Meteo polling)[/dim]")
     console.print("  [dim]• malabar-watch --test-risk     (Test deterministic risk engine)[/dim]")
     console.print("  [dim]• malabar-watch --test-llm      (Test bilingual LLM advisory)[/dim]")
-    console.print("  [dim]• malabar-watch --test-bot      (Simulate Telegram alert broadcast)[/dim]")
+    console.print("  [dim]• malabar-watch --test-bot      (Simulate Telegram alert)[/dim]")
     console.print("  [dim]• malabar-watch --run-pipeline  (Run full end-to-end cycle)[/dim]")
     console.print("  [dim]• malabar-watch --bot           (Start live Telegram bot daemon)[/dim]")
     return 0

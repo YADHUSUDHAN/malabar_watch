@@ -1,11 +1,8 @@
-"""Telegram command and callback query handlers for Malabar Watch."""
-
-from __future__ import annotations
-
 import logging
-from typing import Any
+from datetime import datetime
+from typing import Any, cast
 
-from telegram import Update
+from telegram import Message, Update
 from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
 
@@ -33,7 +30,7 @@ def get_db(context: ContextTypes.DEFAULT_TYPE) -> DatabaseManager:
     if "db" not in context.bot_data:
         db_path = settings.DATABASE_URL.replace("sqlite:///", "")
         context.bot_data["db"] = DatabaseManager(db_path=db_path)
-    return context.bot_data["db"]
+    return cast(DatabaseManager, context.bot_data["db"])
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -81,6 +78,8 @@ async def fetch_or_get_status(
     obs = db.get_latest_observation(norm_district)
 
     if obs:
+        ts_raw = obs.get("timestamp")
+        ts = datetime.fromisoformat(str(ts_raw)) if ts_raw else datetime.now()
         metrics = PrecipitationMetrics(
             district_id=norm_district,
             rainfall_1h=float(obs.get("precipitation_mm", 0.0)),
@@ -88,7 +87,7 @@ async def fetch_or_get_status(
             rainfall_48h=float(obs.get("rainfall_48h", 0.0)),
             rainfall_72h=float(obs.get("rainfall_72h", 0.0)),
             antecedent_index=float(obs.get("antecedent_index", 0.0)),
-            timestamp=obs.get("timestamp"),
+            timestamp=ts,
         )
     else:
         # On-demand live fetch if database is empty
@@ -182,11 +181,15 @@ async def subscribe_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         return
 
     db.add_subscriber(chat_id=chat_id, district_id=district_arg)
-    label = "All Micro-Zones (എല്ലാ മേഖലകളും)" if district_arg == "all" else get_micro_zone_label(district_arg)
+    if district_arg == "all":
+        label = "All Micro-Zones (എല്ലാ മേഖലകളും)"
+    else:
+        label = get_micro_zone_label(district_arg)
 
     await update.effective_message.reply_text(
         f"✅ <b>Subscribed successfully!</b>\n"
-        f"You will now receive automated bilingual alerts for <b>{label}</b> whenever risk levels escalate.\n\n"
+        f"You will now receive automated bilingual alerts for <b>{label}</b> "
+        f"whenever risk levels escalate.\n\n"
         f"<i>Send /unsubscribe at any time to opt-out.</i>",
         parse_mode=ParseMode.HTML,
     )
@@ -265,7 +268,7 @@ async def callback_query_handler(update: Update, context: ContextTypes.DEFAULT_T
                 try:
                     metrics, assessment, advisory = await fetch_or_get_status(d_id, db)
                     text = format_status_html(metrics, assessment, advisory)
-                    if query.message:
+                    if isinstance(query.message, Message):
                         await query.message.reply_text(
                             text=text,
                             parse_mode=ParseMode.HTML,
@@ -277,7 +280,7 @@ async def callback_query_handler(update: Update, context: ContextTypes.DEFAULT_T
             try:
                 metrics, assessment, advisory = await fetch_or_get_status(target, db)
                 text = format_status_html(metrics, assessment, advisory)
-                if query.message:
+                if isinstance(query.message, Message):
                     await query.message.reply_text(
                         text=text,
                         parse_mode=ParseMode.HTML,
@@ -286,14 +289,14 @@ async def callback_query_handler(update: Update, context: ContextTypes.DEFAULT_T
                     )
             except Exception as e:
                 logger.error("Failed querying status for %s: %s", target, e)
-                if query.message:
+                if isinstance(query.message, Message):
                     await query.message.reply_text(f"⚠️ Error retrieving status for {target}: {e}")
 
     elif action == "sub":
         if chat_id:
             db.add_subscriber(chat_id=chat_id, district_id=target)
             label = "All Micro-Zones (എല്ലാം)" if target == "all" else get_micro_zone_label(target)
-            if query.message:
+            if isinstance(query.message, Message):
                 await query.message.reply_text(
                     f"✅ <b>Subscribed to alerts for {label}!</b>\n"
                     "You will receive instant bilingual alerts whenever risk escalates.\n"
@@ -304,7 +307,7 @@ async def callback_query_handler(update: Update, context: ContextTypes.DEFAULT_T
     elif action == "hist":
         history = db.get_rainfall_history(target, hours=72)
         text = format_history_html(target, history)
-        if query.message:
+        if isinstance(query.message, Message):
             await query.message.reply_text(
                 text=text,
                 parse_mode=ParseMode.HTML,

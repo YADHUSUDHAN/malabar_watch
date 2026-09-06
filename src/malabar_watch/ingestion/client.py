@@ -1,5 +1,4 @@
-"""Asynchronous HTTP client for retrieving hourly rainfall data from Open-Meteo API."""
-
+import logging
 from datetime import datetime
 from typing import Any
 
@@ -8,6 +7,8 @@ import httpx
 
 from malabar_watch.config import settings
 from malabar_watch.ingestion.models import HourlyPrecipitationData
+
+logger = logging.getLogger(__name__)
 
 
 class OpenMeteoClient:
@@ -60,6 +61,13 @@ class OpenMeteoClient:
             "forecast_days": forecast_days,
         }
 
+        logger.debug(
+            "Fetching precipitation from Open-Meteo: lat=%.4f, lon=%.4f, past_days=%d",
+            latitude,
+            longitude,
+            past_days,
+        )
+
         if self._external_client is not None:
             response = await self._external_client.get(
                 self.base_url, params=params, timeout=self.timeout
@@ -72,7 +80,14 @@ class OpenMeteoClient:
                 response.raise_for_status()
                 payload = response.json()
 
-        return self._parse_payload(payload)
+        parsed = self._parse_payload(payload)
+        logger.debug(
+            "Parsed %d hourly records from Open-Meteo for (%.4f, %.4f)",
+            len(parsed.timestamps),
+            latitude,
+            longitude,
+        )
+        return parsed
 
     def _parse_payload(self, payload: dict[str, Any]) -> HourlyPrecipitationData:
         """Parses and validates Open-Meteo JSON response into HourlyPrecipitationData."""

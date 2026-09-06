@@ -48,7 +48,7 @@ class TelegramBotService:
                 "or define it in your .env file."
             )
 
-        app: Application[Any, Any, Any, Any, Any, Any] = ApplicationBuilder().token(self.token).build()
+        app = ApplicationBuilder().token(self.token).build()
 
         # Share database manager in bot data
         app.bot_data["db"] = self.db
@@ -70,6 +70,9 @@ class TelegramBotService:
 
     def run_polling(self) -> None:
         """Starts outbound long polling (blocking call). Zero open inbound ports."""
+        from malabar_watch.logging import setup_logging
+
+        setup_logging()
         app = self.build_application()
         logger.info(
             "Starting Malabar Watch Telegram bot in long-polling mode (Zero Inbound Ports)..."
